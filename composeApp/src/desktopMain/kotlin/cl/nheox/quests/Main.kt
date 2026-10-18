@@ -298,6 +298,14 @@ private fun launchUi(
                     position = WindowPosition(androidx.compose.ui.Alignment.Center),
                 ),
             ) {
+                // Ask the window manager for focus explicitly. An undecorated,
+                // always-on-top window is not guaranteed to be given keyboard
+                // focus on appearing, and a capture box you cannot type into is
+                // worse than no capture box at all.
+                LaunchedEffect(Unit) {
+                    window.toFront()
+                    window.requestFocus()
+                }
                 QuestsTheme(dark = dark, strings = strings, clock = runtime.clock) {
                     QuickCaptureContent(
                         clock = runtime.clock,
