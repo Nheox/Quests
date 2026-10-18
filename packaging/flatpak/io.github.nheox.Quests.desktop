@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Quests
+GenericName=Quest tracker
+Comment=A local-first gamified quest tracker for real life
+Exec=quests %u
+Icon=io.github.nheox.Quests
+Terminal=false
+Categories=Office;ProjectManagement;Utility;
+Keywords=quest;task;todo;habit;productivity;rpg;
+StartupNotify=true
+StartupWMClass=cl-nheox-quests-MainKt

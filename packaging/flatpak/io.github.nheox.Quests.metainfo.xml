@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.nheox.Quests</id>
+  <name>Quests</name>
+  <summary>A local-first gamified quest tracker for real life</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      Quests is a quest log for real life. Rate things by how hard they are, how
+      frightening they are, and how urgent — then watch what you actually did,
+      instead of what you meant to do.
+    </p>
+    <p>
+      Fear is tracked as its own dimension, separate from difficulty. A
+      two-minute phone call can be terrifying; a four-hour spreadsheet can be
+      trivial but dull. Rating the two separately lets Quests reward emotional
+      difficulty, and lets it show you, later, how much of your avoided work is
+      the frightening kind.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Quests with difficulty, fear and urgency, sub-quests, repetition and reminders</li>
+      <li>Skills that gain experience and level up from what you finish</li>
+      <li>Reward points, rewards with escalating cost, and an inventory</li>
+      <li>A fear log, trend charts and a radar of where your effort actually goes</li>
+      <li>Global quick capture, a command palette and full keyboard navigation</li>
+      <li>A generated calendar feed, so reminders reach your phone without Quests being on it</li>
+      <li>Plain-text storage in a folder you choose, synced with whatever you already use</li>
+      <li>No account, no server, no telemetry, and no networking code at all</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.nheox.Quests.desktop</launchable>
+
+  <url type="homepage">https://github.com/nheox/quests</url>
+  <url type="bugtracker">https://github.com/nheox/quests/issues</url>
+  <url type="vcs-browser">https://github.com/nheox/quests</url>
+
+  <developer id="io.github.nheox">
+    <name>nheox</name>
+  </developer>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+
+  <recommends>
+    <display_length compare="ge">900</display_length>
+  </recommends>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0" date="2026-10-18">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

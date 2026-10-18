@@ -1,0 +1,64 @@
+# Flatpak manifest for Quests.
+#
+# Wraps the app image that `./gradlew createDistributable` produces, rather than
+# building Kotlin inside the sandbox: Flathub builders have no network access
+# during the build, and a Gradle build without network access means vendoring
+# every dependency by hand. The release workflow builds the image first and this
+# manifest packages it.
+#
+# Build locally with:
+#   ./gradlew createDistributable
+#   flatpak-builder --user --install --force-clean build-flatpak \
+#     packaging/flatpak/io.github.nheox.Quests.yml
+app-id: io.github.nheox.Quests
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: quests
+
+finish-args:
+  # A window, and nothing else.
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  # Sound only for the completion chime, which is a single toggle in Settings.
+  - --socket=pulseaudio
+  # The sync folder. The user picks where it is, so the home directory is the
+  # honest scope; there is no portal for "a folder the app re-opens every
+  # launch" that does not involve re-prompting.
+  - --filesystem=home
+  # Deliberately NOT granted:
+  #   --share=network      Quests contains no networking code at all.
+  #   --talk-name=ca.desrt.dconf  Settings cannot install the GNOME keybinding
+  #                        from inside the sandbox. Documented as a manual step
+  #                        instead; see docs/HOTKEY.md. Granting dconf access to
+  #                        write one shortcut is not a trade worth making.
+
+modules:
+  - name: quests
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/quests
+      - cp -r Quests/* /app/quests/
+      - mkdir -p /app/bin
+      - ln -sf /app/quests/bin/Quests /app/bin/quests
+      - install -Dm644 io.github.nheox.Quests.desktop
+          /app/share/applications/io.github.nheox.Quests.desktop
+      - install -Dm644 io.github.nheox.Quests.metainfo.xml
+          /app/share/metainfo/io.github.nheox.Quests.metainfo.xml
+      - install -Dm644 quests-256.png
+          /app/share/icons/hicolor/256x256/apps/io.github.nheox.Quests.png
+      - install -Dm644 quests.png
+          /app/share/icons/hicolor/512x512/apps/io.github.nheox.Quests.png
+    sources:
+      - type: dir
+        path: ../../composeApp/build/compose/binaries/main/app
+      - type: file
+        path: io.github.nheox.Quests.desktop
+      - type: file
+        path: io.github.nheox.Quests.metainfo.xml
+      - type: file
+        path: ../../composeApp/src/desktopMain/resources/icons/quests-256.png
+      - type: file
+        path: ../../composeApp/src/desktopMain/resources/icons/quests.png
