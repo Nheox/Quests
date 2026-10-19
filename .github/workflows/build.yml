@@ -60,6 +60,18 @@ jobs:
       - name: Build the package
         run: ./gradlew packageDeb --no-daemon
 
+      # jpackage writes its real error to a file under build/compose/logs and
+      # prints only the exit code, so a packaging failure is undiagnosable from
+      # the CI output alone. Surface it.
+      - name: Show jpackage logs
+        if: failure()
+        run: |
+          for f in composeApp/build/compose/logs/*/*.txt; do
+            [ -f "$f" ] || continue
+            echo "===== $f"
+            cat "$f"
+          done
+
       - name: Check the launcher is on PATH in the package
         run: |
           deb=$(ls composeApp/build/compose/binaries/main/deb/*.deb)
@@ -92,6 +104,18 @@ jobs:
       # See packaging/macos/README.md.
       - name: Build the package
         run: ./gradlew packageDmg --no-daemon
+
+      # jpackage writes its real error to a file under build/compose/logs and
+      # prints only the exit code, so a packaging failure is undiagnosable from
+      # the CI output alone. Surface it.
+      - name: Show jpackage logs
+        if: failure()
+        run: |
+          for f in composeApp/build/compose/logs/*/*.txt; do
+            [ -f "$f" ] || continue
+            echo "===== $f"
+            cat "$f"
+          done
 
       - uses: actions/upload-artifact@v4
         with:
