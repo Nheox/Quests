@@ -8,8 +8,11 @@ Produces an unsigned `.dmg` in
 `composeApp/build/compose/binaries/main/dmg/`. Must be run on macOS —
 `jpackage` cannot cross-build a `.dmg`.
 
-An unsigned build will be blocked by Gatekeeper. Until signing is set up, a user
-has to right-click → Open, or clear the quarantine attribute:
+An unsigned build will be blocked by Gatekeeper: "Apple could not verify
+“Quests” is free of malware". Until signing is set up, a user has to allow it
+once — open it, close the warning, then *System Settings → Privacy & Security →
+Open Anyway* (right-click → Open no longer works since macOS 15) — or clear the
+quarantine attribute:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Quests.app
