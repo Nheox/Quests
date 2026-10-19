@@ -55,6 +55,25 @@ requires an unsigned-executable-memory entitlement, which is unavoidable rather
 than careless. Notably absent is any network entitlement, because the
 application contains no networking code.
 
+## Bundle version
+
+macOS will not accept a version whose first component is zero. `jpackage`
+rejects it outright:
+
+```
+The first number in an app-version cannot be zero or negative.
+```
+
+That makes a pre-1.0 project unpackageable on macOS as-is, so
+`composeApp/build.gradle.kts` maps it: while the project version is `0.x`, the
+bundle is built as `1.0.0`. See `macAppVersion` there.
+
+This affects only `CFBundleVersion` and `CFBundleShortVersionString`. Everything
+a person actually reads still reports the real version — `quests --version`, the
+About section in Settings, the calendar feed's `PRODID`, the `.deb`, and the
+release artefacts. Once the project reaches 1.0.0 the mapping returns the real
+version unchanged and can be deleted.
+
 ## Platform notes
 
 - **Global hotkeys work properly on macOS**, unlike Wayland

@@ -24,6 +24,25 @@ plugins {
 
 val questsVersion: String = (findProperty("quests.version") as String?) ?: "0.1.0"
 
+/**
+ * The version macOS will accept.
+ *
+ * jpackage refuses an app-version whose first component is zero — "The first
+ * number in an app-version cannot be zero or negative" — because it becomes
+ * `CFBundleVersion`, and Apple requires that to start at 1. A pre-1.0 project is
+ * therefore unpackageable on macOS without a mapping, which is what this is.
+ *
+ * Only the bundle's own version fields are affected. The application still
+ * reports [questsVersion] everywhere a person actually sees it: `--version`,
+ * the About section in Settings, the generated calendar feed's PRODID, the
+ * `.deb`, and the release artefacts. Once the project reaches 1.0.0 this
+ * returns the real version unchanged and can be deleted.
+ */
+fun macAppVersion(version: String): String {
+    val major = version.substringBefore('.').toIntOrNull() ?: 0
+    return if (major >= 1) version else "1.0.0"
+}
+
 kotlin {
     jvmToolchain(21)
 
@@ -140,13 +159,19 @@ compose.desktop {
                 bundleID = "io.github.nheox.Quests"
                 packageName = "Quests"
                 dockName = "Quests"
+                // See macAppVersion: a 0.x version is rejected outright by
+                // jpackage on macOS, so the bundle carries a legal one while
+                // everything a person reads still says 0.1.0.
+                packageVersion = macAppVersion(questsVersion)
+                dmgPackageVersion = macAppVersion(questsVersion)
                 iconFile.set(project.file("src/desktopMain/resources/icons/quests.icns"))
                 infoPlist {
+                    // NSHighResolutionCapable is deliberately absent: jpackage's
+                    // own Info.plist template already sets it, and a duplicate
+                    // key in a plist is at best redundant.
                     extraKeysRawXml = """
                         <key>LSApplicationCategoryType</key>
                         <string>public.app-category.productivity</string>
-                        <key>NSHighResolutionCapable</key>
-                        <true/>
                     """.trimIndent()
                 }
             }
