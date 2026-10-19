@@ -201,14 +201,17 @@ compose.desktop {
  *     global quick capture (§8.3) would be broken for anyone installing from the
  *     package.
  *  2. **A desktop entry in the standard location.** jpackage leaves its
- *     generated `.desktop` inside `/opt` and registers it from `postinst` with
- *     `xdg-desktop-menu`. Debian convention is to ship the file in
- *     `/usr/share/applications`, and ours additionally declares a *Quick
+ *     generated `.desktop` inside `/opt`. Debian convention is to ship the file
+ *     in `/usr/share/applications`, and ours additionally declares a *Quick
  *     capture* action.
- *  3. **A `postinst` that cannot fail the install.** The generated one calls
- *     `xdg-desktop-menu install` and propagates its exit code, so installing on
- *     a machine with no writable menu directory — a container, a chroot, a
- *     minimal server — fails the whole package over a menu entry.
+ *  3. **No second menu entry.** jpackage also registers its generated
+ *     `.desktop` from `postinst` with `xdg-desktop-menu`, so alongside ours the
+ *     application menu showed Quests twice. Those calls are removed from
+ *     `postinst` and `prerm` alike, which also means a machine with no writable
+ *     menu directory — a container, a chroot, a minimal server — can no longer
+ *     fail the install or the removal over a menu entry. Upgrading from a
+ *     package that registered the duplicate still clears it, because on
+ *     upgrade it is the old package's `prerm` that runs.
  *
  * The Compose plugin exposes no hook for any of this, so the package is
  * unpacked, corrected and rebuilt.
@@ -256,7 +259,7 @@ abstract class FinalizeDebPackage : DefaultTask() {
             addLauncherSymlink(staging)
             addDesktopEntry(staging)
             addIcons(staging)
-            makePostinstTolerant(staging)
+            removeGeneratedMenuEntry(staging)
 
             val build = listOf("dpkg-deb", "--build", staging.absolutePath, archive.absolutePath)
             exec.exec { commandLine(if (hasFakeroot) listOf("fakeroot") + build else build) }
@@ -287,18 +290,14 @@ abstract class FinalizeDebPackage : DefaultTask() {
         }
     }
 
-    private fun makePostinstTolerant(staging: File) {
-        val postinst = staging.resolve("DEBIAN/postinst")
-        if (!postinst.isFile) return
-        val patched = postinst.readLines().joinToString("\n") { line ->
-            if (line.trimStart().startsWith("xdg-desktop-menu") && !line.contains("|| true")) {
-                "$line || true"
-            } else {
-                line
-            }
+    private fun removeGeneratedMenuEntry(staging: File) {
+        listOf("postinst", "prerm").forEach { name ->
+            val script = staging.resolve("DEBIAN/$name")
+            if (!script.isFile) return@forEach
+            val kept = script.readLines().filterNot { it.trimStart().startsWith("xdg-desktop-menu") }
+            script.writeText(kept.joinToString("\n") + "\n")
+            script.setExecutable(true)
         }
-        postinst.writeText(patched + "\n")
-        postinst.setExecutable(true)
     }
 }
 

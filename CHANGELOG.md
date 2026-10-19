@@ -75,6 +75,9 @@ First working build. Milestones M1 through M5 of
 
 - `.deb` via jpackage, including the `/usr/bin/quests` symlink that global quick
   capture depends on.
+- One application-menu entry, not two: the `.deb` no longer also registers the
+  entry jpackage generates, and neither installing nor removing the package can
+  fail over a menu entry.
 - Flatpak manifest and AppStream metainfo, not yet submitted to Flathub.
 - macOS `.dmg`, unsigned; signing and notarisation configured but not enabled.
 

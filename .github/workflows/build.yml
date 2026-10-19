@@ -81,6 +81,16 @@ jobs:
             exit 1
           }
 
+      - name: Check the package adds only one menu entry
+        run: |
+          deb=$(ls composeApp/build/compose/binaries/main/deb/*.deb)
+          dpkg-deb -e "$deb" deb-control
+          if grep -q 'xdg-desktop-menu' deb-control/postinst deb-control/prerm; then
+            echo "The maintainer scripts register jpackage's generated desktop entry"
+            echo "alongside ours, so the application menu would show Quests twice."
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: quests-deb

@@ -16,8 +16,8 @@ missing is only visible in `build/compose/logs/packageDeb/`.
 |---|---|
 | `/opt/quests/` | the application image, including its own JRE |
 | `/opt/quests/bin/Quests` | the launcher |
-| `/usr/bin/quests` | symlink created by the package's `postinst` |
-| `/usr/share/applications/quests-Quests.desktop` | desktop entry |
+| `/usr/bin/quests` | symlink to the launcher |
+| `/usr/share/applications/quests.desktop` | desktop entry |
 | `/usr/share/icons/hicolor/.../quests.png` | icon |
 
 The package is unconfined: no sandbox, no portal indirection, and `gsettings`
@@ -27,14 +27,17 @@ being replaced by it ([SPEC.md §1](../../docs/SPEC.md#1-decisions-settled)).
 
 ## `quests.desktop`
 
-`jpackage` generates its own desktop entry from the package configuration, and
-that is what the `.deb` installs. The `quests.desktop` in this directory is a
-reference copy that additionally declares a *Quick capture* desktop action, for
-anyone who wants to install it by hand over the generated one:
+The `quests.desktop` in this directory is the desktop entry the `.deb` installs,
+including a *Quick capture* desktop action. `jpackage` also generates an entry of
+its own and registers it from `postinst`; `finalizeDebPackage` removes that
+registration, because with both installed the application menu shows Quests
+twice.
+
+Packages built before that fix do show it twice. Installing a newer package
+clears the extra entry; for the same version, reinstall explicitly:
 
 ```sh
-sudo install -Dm644 packaging/deb/quests.desktop \
-  /usr/share/applications/quests.desktop
+sudo apt install --reinstall ./quests_*.deb
 ```
 
 ## The `quests` command
