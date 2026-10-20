@@ -1,120 +1,203 @@
 #!/usr/bin/env python3
-"""Generates the Quests application icon.
+"""Rasterises the Quests application icon.
 
 The artwork is original to this project (see §2 of docs/SPEC.md: all icons and
-artwork original or permissively licensed). It is generated from this script
-rather than drawn in an editor so that it is reproducible, reviewable as a diff,
-and obviously ours.
+artwork original or permissively licensed).
 
-The mark: a gold target ring enclosing a rising arrow. A target because a quest
-is something aimed at; the arrow because the point of the app is progress rather
-than a static list. The arrow sits *inside* the ring rather than across it — a
-line crossing a circle reads as a prohibition sign, which is the opposite of the
-intended meaning. Legible down to 16px, which rules out anything more detailed.
+**The SVG files beside this script are the master.** Edit `quests.svg` — never
+the PNGs, and never this script's geometry, because it has none. This script
+only rasterises. Keeping a single vector master is the reason the icon stays
+sharp at 1024 and still resolves at 16px; a raster-only icon cannot be fixed
+once it is wrong.
 
-Outputs PNG (Linux, tray), ICO (Windows) and ICNS (macOS).
+The mark: a gold progress ring that *is* the bowl of a Q, broken at the lower
+right by a teal tail crossing through the gap. One form, not a letter sitting
+next to a circle — which is what keeps it legible at 16px, where two competing
+strokes merge into a blob. The ring is the same progress ring the app draws
+around a skill level, so the icon and the UI say the same thing. The dim
+remainder of the ring (`inkBorder`) disappears at small sizes, leaving a gold
+arc and a teal tail: the silhouette degrades on purpose.
+
+One master, two framings. `quests.svg` is full-bleed: artwork to the edges of
+a 1024 canvas, which is what Linux hicolor, Flathub and the in-app window icon
+want. macOS wants Apple's Big Sur grid instead — an 824x824 rounded square
+centred in a 1024 canvas — because the Dock composes its own shadow around that
+margin, and a full-bleed icon simply looks oversized beside every other icon in
+it. Rather than keep a second file in sync by hand, this script derives the
+macOS framing by wrapping the master in that transform at render time.
+
+Outputs PNG (Linux, window icon), ICO (Windows, unsupported-but-working) and
+ICNS (macOS).
 
     python3 packaging/icon/generate_icon.py
+
+Needs one SVG rasteriser. Any of these, in order of preference:
+
+    pip install cairosvg          # no system packages beyond libcairo
+    apt install librsvg2-bin      # provides rsvg-convert
+    apt install inkscape
 """
 
-import math
 import os
+import re
+import shutil
 import struct
-from PIL import Image, ImageDraw
+import subprocess
+import sys
+import tempfile
 
-INK = (14, 17, 22, 255)
-INK_EDGE = (42, 52, 64, 255)
-GOLD = (224, 169, 74, 255)
-TEAL = (63, 184, 175, 255)
+HERE = os.path.dirname(os.path.abspath(__file__))
+MASTER = os.path.join(HERE, "quests.svg")
+MASTER_SMALL = os.path.join(HERE, "quests-small.svg")
 
-SIZES = (16, 32, 48, 64, 128, 256, 512, 1024)
-OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "composeApp", "src", "desktopMain", "resources", "icons")
+# Below this, the full mark stops resolving: the dim track muddies into the
+# gold, and the casing that separates the tail from the ring eats more than a
+# pixel of a ring that is only a pixel or two wide. Optical sizing is not
+# duplication — it is the same mark drawn for a different amount of room.
+SMALL_ABOVE = 32
+
+# Apple's macOS icon grid: 824x824 of artwork centred in a 1024 canvas.
+MACOS_INSET = 100
+MACOS_SCALE = (1024 - 2 * MACOS_INSET) / 1024
+OUT_DIR = os.path.normpath(
+    os.path.join(HERE, "..", "..", "composeApp", "src", "desktopMain", "resources", "icons")
+)
+
+# Linux hicolor's standard set, plus 1024 for the macOS retina slot.
+SIZES = (16, 24, 32, 48, 64, 128, 256, 512, 1024)
 
 
-def draw(size: int) -> Image.Image:
-    # Supersample and downscale: hand-drawn arcs alias badly at 16px otherwise.
-    scale = 8 if size <= 64 else 4
-    s = size * scale
-    image = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    canvas = ImageDraw.Draw(image)
+def _render_cairosvg(svg: str, size: int, destination: str) -> bool:
+    try:
+        import cairosvg
+    except ImportError:
+        return False
+    cairosvg.svg2png(url=svg, write_to=destination, output_width=size, output_height=size)
+    return True
 
-    radius = s * 0.22
-    canvas.rounded_rectangle([0, 0, s - 1, s - 1], radius=radius, fill=INK, outline=INK_EDGE,
-                             width=max(1, int(s * 0.012)))
 
-    centre = s / 2
-    ring_outer = s * 0.325
-    ring_width = max(1, int(s * 0.070))
+def _render_rsvg(svg: str, size: int, destination: str) -> bool:
+    if shutil.which("rsvg-convert") is None:
+        return False
+    subprocess.run(
+        ["rsvg-convert", "-w", str(size), "-h", str(size), "-o", destination, svg],
+        check=True,
+    )
+    return True
 
-    canvas.ellipse(
-        [centre - ring_outer, centre - ring_outer, centre + ring_outer, centre + ring_outer],
-        outline=GOLD, width=ring_width,
+
+def _render_inkscape(svg: str, size: int, destination: str) -> bool:
+    if shutil.which("inkscape") is None:
+        return False
+    subprocess.run(
+        ["inkscape", svg, "-w", str(size), "-h", str(size), "-o", destination],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return True
+
+
+RENDERERS = (_render_cairosvg, _render_rsvg, _render_inkscape)
+
+
+def render(svg: str, size: int, destination: str) -> None:
+    for renderer in RENDERERS:
+        if renderer(svg, size, destination):
+            return
+    sys.exit(
+        "No SVG rasteriser found. Install one of:\n"
+        "  pip install cairosvg\n"
+        "  apt install librsvg2-bin\n"
+        "  apt install inkscape"
     )
 
-    inner = s * 0.205
-    canvas.ellipse(
-        [centre - inner, centre - inner, centre + inner, centre + inner],
-        outline=TEAL, width=max(1, int(s * 0.034)),
+
+def macos_master(scratch: str, source_path: str, name: str) -> str:
+    """The master wrapped in Apple's icon-grid transform.
+
+    Derived rather than stored, so there is exactly one place the artwork can
+    be edited. A gradient declared in userSpaceOnUse resolves inside the
+    wrapping group's coordinate space, so the tile and the tail's casing go on
+    matching each other without any change to the master.
+    """
+    with open(source_path, encoding="utf-8") as handle:
+        source = handle.read()
+
+    opening = re.search(r"<svg\b[^>]*>", source).group(0)
+    body = source[source.index(opening) + len(opening) : source.rindex("</svg>")]
+
+    wrapped = (
+        opening
+        + f'<g transform="translate({MACOS_INSET},{MACOS_INSET}) scale({MACOS_SCALE})">'
+        + body
+        + "</g></svg>"
     )
 
-    # The rising arrow, wholly inside the inner ring.
-    thickness = max(2, int(s * 0.062))
-    half = thickness / 2
-    stem_bottom = centre + s * 0.112
-    stem_top = centre - s * 0.112
-    canvas.line([(centre, stem_bottom), (centre, stem_top)], fill=GOLD, width=thickness)
-
-    wing = s * 0.082
-    head = [
-        (centre - wing, stem_top + wing * 0.92),
-        (centre, stem_top),
-        (centre + wing, stem_top + wing * 0.92),
-    ]
-    canvas.line(head, fill=GOLD, width=thickness, joint="curve")
-    for point in (head[0], head[-1], (centre, stem_bottom), (centre, stem_top)):
-        canvas.ellipse([point[0] - half, point[1] - half, point[0] + half, point[1] + half], fill=GOLD)
-
-    return image.resize((size, size), Image.LANCZOS)
+    path = os.path.join(scratch, name)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(wrapped)
+    return path
 
 
 def write_icns(path: str, frames: dict) -> None:
-    """A minimal but valid ICNS: PNG payloads under the modern type codes."""
-    types = {16: b"icp4", 32: b"icp5", 64: b"icp6", 128: b"ic07", 256: b"ic08", 512: b"ic09", 1024: b"ic10"}
+    """A minimal but valid ICNS: PNG payloads under the modern type codes.
+
+    The @2x codes matter. Without ic11/ic12/ic13/ic14 the Dock upscales the 1x
+    slot on a retina display, and a soft icon there is the single most visible
+    sign of an app that was packaged rather than designed.
+    """
+    one_x = {16: b"icp4", 32: b"icp5", 128: b"ic07", 256: b"ic08", 512: b"ic09", 1024: b"ic10"}
+    two_x = {32: b"ic11", 64: b"ic12", 256: b"ic13", 512: b"ic14"}
+
     chunks = b""
-    for size, code in types.items():
-        if size not in frames:
-            continue
-        payload = frames[size]
-        chunks += code + struct.pack(">I", len(payload) + 8) + payload
+    for table in (one_x, two_x):
+        for size, code in table.items():
+            if size not in frames:
+                continue
+            payload = frames[size]
+            chunks += code + struct.pack(">I", len(payload) + 8) + payload
+
     with open(path, "wb") as handle:
         handle.write(b"icns" + struct.pack(">I", len(chunks) + 8) + chunks)
 
 
 def main() -> None:
-    out = os.path.normpath(OUT_DIR)
-    os.makedirs(out, exist_ok=True)
+    os.makedirs(OUT_DIR, exist_ok=True)
 
-    images = {size: draw(size) for size in SIZES}
+    for size in SIZES:
+        master = MASTER_SMALL if size <= SMALL_ABOVE else MASTER
+        render(master, size, os.path.join(OUT_DIR, f"quests-{size}.png"))
 
-    images[512].save(os.path.join(out, "quests.png"))
-    for size in (16, 32, 48, 64, 128, 256):
-        images[size].save(os.path.join(out, f"quests-{size}.png"))
+    # The window icon and the Linux .deb icon.
+    shutil.copyfile(os.path.join(OUT_DIR, "quests-512.png"), os.path.join(OUT_DIR, "quests.png"))
 
-    images[256].save(
-        os.path.join(out, "quests.ico"),
+    # The scalable icon, shipped as-is for Flathub and hicolor/scalable.
+    shutil.copyfile(MASTER, os.path.join(OUT_DIR, "quests.svg"))
+
+    try:
+        from PIL import Image
+    except ImportError:
+        sys.exit("Pillow is required for the .ico: pip install pillow")
+
+    Image.open(os.path.join(OUT_DIR, "quests-256.png")).save(
+        os.path.join(OUT_DIR, "quests.ico"),
         sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
     )
 
-    png_bytes = {}
-    for size, image in images.items():
-        temporary = os.path.join(out, f".icns-{size}.png")
-        image.save(temporary)
-        with open(temporary, "rb") as handle:
-            png_bytes[size] = handle.read()
-        os.remove(temporary)
-    write_icns(os.path.join(out, "quests.icns"), png_bytes)
+    # macOS gets its own master, with Apple's margin built in.
+    payloads = {}
+    with tempfile.TemporaryDirectory() as scratch:
+        full = macos_master(scratch, MASTER, "quests-macos.svg")
+        small = macos_master(scratch, MASTER_SMALL, "quests-macos-small.svg")
+        for size in (16, 32, 64, 128, 256, 512, 1024):
+            frame = os.path.join(scratch, f"{size}.png")
+            render(small if size <= SMALL_ABOVE else full, size, frame)
+            with open(frame, "rb") as handle:
+                payloads[size] = handle.read()
+    write_icns(os.path.join(OUT_DIR, "quests.icns"), payloads)
 
-    print("wrote icons to", out)
+    print("wrote icons to", OUT_DIR)
 
 
 if __name__ == "__main__":

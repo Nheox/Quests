@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Quests">
+  <title>Quests</title>
+  <desc>The Quests mark drawn for small sizes: a solid gold ring crossed at the lower right by a teal tail.</desc>
+  <defs>
+    <linearGradient id="tile" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1024">
+      <stop offset="0" stop-color="#1B222B"/>
+      <stop offset="1" stop-color="#0E1116"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <circle cx="512" cy="512" r="296" fill="none" stroke="#E0A94A" stroke-width="116"/>
+  <path d="M636.45 636.45 L800.49 800.49" fill="none" stroke="url(#tile)" stroke-width="168" stroke-linecap="round"/>
+  <path d="M636.45 636.45 L800.49 800.49" fill="none" stroke="#3FB8AF" stroke-width="116" stroke-linecap="round"/>
+</svg>
