@@ -189,6 +189,15 @@ public interface Strings {
     public val actionMoveUnder: String
     public val actionAddInline: String
     public val actionChange: String
+    public val rewardsSubtitle: String
+    public val inventorySubtitle: String
+    public val sectionReadyToClaim: String
+    public val sectionSavingUp: String
+    public val sectionConsumables: String
+    public val sectionKeepsakes: String
+    public val actionNewReward: String
+    public val actionNewItem: String
+    public val itemOutOfStock: String
     public val fieldParent: String
     public val topLevel: String
     public val repeatNever: String
@@ -316,6 +325,21 @@ public interface Strings {
 
     /** The repeat picker's create line: "Every 3 days", or a prompt while nothing usable is typed. */
     public fun useRepetition(repetition: Repetition?): String
+
+    /** "● You have 148 points": the purse at the top of a catalogue. */
+    public fun youHavePoints(points: Int): String
+
+    /** "52 more points needed": why a reward cannot be claimed yet. */
+    public fun morePointsNeeded(points: Int): String
+
+    /** "claimed 3 times · +5 points after every 2 claims", or what applies of it. */
+    public fun rewardDescription(claimCount: Int, costIncrement: Int?, incrementEvery: Int?): String
+
+    /** "consumable" or "keeps", for an inventory item. */
+    public fun itemDescription(consumable: Boolean): String
+
+    /** "you have 3". */
+    public fun youHave(quantity: Int): String
 
     /** "Moved 1 quest", "Moved 3 quests": the snackbar after Move under…. */
     public fun questsMoved(count: Int): String

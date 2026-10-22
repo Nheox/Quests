@@ -1,6 +1,11 @@
 package cl.nheox.quests.ui.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import cl.nheox.quests.ui.components.AddButton
+import cl.nheox.quests.ui.components.PointsBadge
+import cl.nheox.quests.ui.components.CatalogueSection
+import cl.nheox.quests.ui.components.CatalogueRow
+import cl.nheox.quests.ui.components.CatalogueHeader
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,10 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,19 +40,20 @@ import cl.nheox.quests.ui.components.QuestButton
 import cl.nheox.quests.ui.components.QuestTextField
 import cl.nheox.quests.ui.components.ToggleRow
 import cl.nheox.quests.ui.theme.Glyph
-import cl.nheox.quests.ui.theme.QuestIcon
-import cl.nheox.quests.ui.theme.Radii
 import cl.nheox.quests.ui.theme.Space
 import cl.nheox.quests.ui.theme.strings
 import cl.nheox.quests.ui.theme.theme
 
 /**
- * Rewards: what the spendable currency is actually for.
+ * Rewards: what the spendable currency is actually for, laid out as the
+ * catalogue (the owner's layout 2).
  *
  * Escalating cost is the interesting mechanic — a reward can get more expensive
  * every N claims, so a treat that is fine occasionally does not stay cheap when
  * it becomes a habit. That is a self-regulating economy rather than a
- * willpower test.
+ * willpower test. The list is split by what can be claimed now and what is
+ * still being saved up for, cheapest first in each, and a reward out of reach
+ * says how far off it is.
  */
 @Composable
 public fun RewardsScreen(
@@ -58,76 +62,21 @@ public fun RewardsScreen(
     modifier: Modifier = Modifier,
 ) {
     val text = strings
-    var name by remember { mutableStateOf("") }
-    var cost by remember { mutableStateOf<Int?>(10) }
-    var increment by remember { mutableStateOf<Int?>(null) }
-    var every by remember { mutableStateOf<Int?>(null) }
+    var adding by remember { mutableStateOf(false) }
     val balance = state.profile.rewardPointBalance
+    val (ready, saving) = state.rewards.values
+        .sortedWith(compareBy({ it.currentCost }, { it.name.lowercase() }))
+        .partition { balance >= it.currentCost }
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().height(Space.toolbarHeight).padding(horizontal = Space.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.sm),
-        ) {
-            Text(text.navRewards, style = MaterialTheme.typography.headlineSmall, color = theme.text)
-            Spacer(Modifier.weight(1f))
-            Pill(text.pointsAmount(balance), color = theme.accent, leading = Glyph.COIN, bold = true)
+        CatalogueHeader(text.navRewards, text.rewardsSubtitle) {
+            PointsBadge(balance)
+            AddButton(text.actionNewReward, onClick = { adding = !adding })
         }
         HLine()
-
-        Column(Modifier.fillMaxWidth().padding(Space.md)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Box(Modifier.weight(1f)) {
-                    QuestTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        placeholder = text.fieldName,
-                        onFocusChange = { app.typing = it },
-                    )
-                }
-                NumberField(
-                    value = cost,
-                    onValueChange = { cost = it },
-                    step = 5,
-                    minimum = 1,
-                    suffix = text.fieldCost,
-                    onFocusChange = { app.typing = it },
-                )
-                QuestButton(
-                    text = text.actionAdd,
-                    primary = true,
-                    enabled = name.isNotBlank() && (cost ?: 0) > 0,
-                    onClick = {
-                        app.store.createReward(
-                            name = name,
-                            cost = cost ?: 10,
-                            costIncrement = increment,
-                            incrementEvery = every,
-                        )
-                        name = ""
-                        increment = null
-                        every = null
-                    },
-                )
-            }
-            Spacer(Modifier.height(Space.xs))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Text(text.fieldCostIncrement, style = MaterialTheme.typography.bodySmall, color = theme.textFaint)
-                NumberField(
-                    value = increment,
-                    onValueChange = { increment = it },
-                    step = 1,
-                    onFocusChange = { app.typing = it },
-                )
-                Text(text.fieldIncrementEvery, style = MaterialTheme.typography.bodySmall, color = theme.textFaint)
-                NumberField(
-                    value = every,
-                    onValueChange = { every = it },
-                    step = 1,
-                    onFocusChange = { app.typing = it },
-                )
-            }
+        if (adding) {
+            NewRewardForm(app, onDone = { adding = false })
+            HLine()
         }
 
         if (state.rewards.isEmpty()) {
@@ -135,67 +84,101 @@ public fun RewardsScreen(
             return@Column
         }
 
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = Space.md)) {
-            items(state.rewards.values.sortedBy { it.currentCost }, key = { it.id }) { reward ->
-                RewardCard(app, reward, balance)
-                Spacer(Modifier.height(Space.sm))
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = Space.xl),
+            contentPadding = PaddingValues(bottom = Space.xl),
+            verticalArrangement = Arrangement.spacedBy(Space.sm),
+        ) {
+            if (ready.isNotEmpty()) {
+                item(key = "ready") { CatalogueSection(text.sectionReadyToClaim) }
+                items(ready, key = { it.id }) { reward -> RewardRow(app, reward, balance) }
+            }
+            if (saving.isNotEmpty()) {
+                item(key = "saving") { CatalogueSection(text.sectionSavingUp) }
+                items(saving, key = { it.id }) { reward -> RewardRow(app, reward, balance) }
             }
         }
     }
 }
 
 @Composable
-private fun RewardCard(app: AppState, reward: Reward, balance: Int) {
+private fun RewardRow(app: AppState, reward: Reward, balance: Int) {
     val text = strings
     val affordable = balance >= reward.currentCost
+    CatalogueRow(
+        glyph = Glyph.GIFT,
+        tint = theme.progression,
+        name = reward.name,
+        description = text.rewardDescription(reward.claimCount, reward.costIncrement, reward.incrementEvery),
+        available = affordable,
+        price = text.pointsAmount(reward.currentCost),
+        status = if (affordable) null else text.morePointsNeeded(reward.currentCost - balance),
+        statusWarning = !affordable,
+        action = {
+            QuestButton(
+                text = text.actionClaim,
+                primary = affordable,
+                enabled = affordable,
+                compact = true,
+                onClick = { if (!app.store.claimReward(reward.id)) app.notify(text.messageNotEnoughPoints) },
+            )
+        },
+        secondary = {
+            IconAction(Glyph.TRASH, text.actionDelete, size = 26.dp, onClick = { app.store.deleteReward(reward.id) })
+        },
+    )
+}
 
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(theme.card, RoundedCornerShape(Radii.md))
-            .padding(Space.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.sm),
-    ) {
-        QuestIcon(Glyph.GIFT, size = 16.dp, tint = theme.progression)
-        Column(Modifier.weight(1f)) {
-            Text(reward.name, style = MaterialTheme.typography.titleMedium, color = theme.text)
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                if (reward.claimCount > 0) {
-                    Text(
-                        "×${reward.claimCount}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = theme.textFaint,
-                    )
-                }
-                if (reward.costIncrement != null && reward.incrementEvery != null) {
-                    Text(
-                        "+${reward.costIncrement} / ${reward.incrementEvery}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = theme.textFaint,
-                    )
-                }
+/** Name, cost and the optional escalation, behind the header's add button. */
+@Composable
+private fun NewRewardForm(app: AppState, onDone: () -> Unit) {
+    val text = strings
+    var name by remember { mutableStateOf("") }
+    var cost by remember { mutableStateOf<Int?>(10) }
+    var increment by remember { mutableStateOf<Int?>(null) }
+    var every by remember { mutableStateOf<Int?>(null) }
+    val valid = name.isNotBlank() && (cost ?: 0) > 0
+    fun save() {
+        if (!valid) return
+        app.store.createReward(name = name, cost = cost ?: 10, costIncrement = increment, incrementEvery = every)
+        onDone()
+    }
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = Space.xl, vertical = Space.md)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Box(Modifier.weight(1f)) {
+                QuestTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = text.fieldName,
+                    onFocusChange = { app.typing = it },
+                    onImeAction = { save() },
+                )
             }
+            NumberField(
+                value = cost,
+                onValueChange = { cost = it },
+                step = 5,
+                minimum = 1,
+                suffix = text.fieldCost,
+                onFocusChange = { app.typing = it },
+            )
+            QuestButton(text = text.actionAdd, primary = true, enabled = valid, onClick = { save() })
         }
-        Pill(
-            text.pointsAmount(reward.currentCost),
-            color = if (affordable) theme.accent else theme.textFaint,
-            leading = Glyph.COIN,
-        )
-        QuestButton(
-            text = text.actionClaim,
-            primary = affordable,
-            enabled = affordable,
-            compact = true,
-            onClick = {
-                if (!app.store.claimReward(reward.id)) app.notify(text.messageNotEnoughPoints)
-            },
-        )
-        IconAction(Glyph.TRASH, text.actionDelete, size = 26.dp, onClick = { app.store.deleteReward(reward.id) })
+        Spacer(Modifier.height(Space.xs))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Text(text.fieldCostIncrement, style = MaterialTheme.typography.bodySmall, color = theme.textFaint)
+            NumberField(value = increment, onValueChange = { increment = it }, step = 1, onFocusChange = { app.typing = it })
+            Text(text.fieldIncrementEvery, style = MaterialTheme.typography.bodySmall, color = theme.textFaint)
+            NumberField(value = every, onValueChange = { every = it }, step = 1, onFocusChange = { app.typing = it })
+        }
     }
 }
 
-/** The inventory: things owned rather than things to do. */
+/**
+ * The inventory: things owned rather than things to do, as the catalogue.
+ * Consumables, which run out, come before keepsakes, which do not.
+ */
 @Composable
 public fun InventoryScreen(
     app: AppState,
@@ -203,40 +186,19 @@ public fun InventoryScreen(
     modifier: Modifier = Modifier,
 ) {
     val text = strings
-    var name by remember { mutableStateOf("") }
-    var consumable by remember { mutableStateOf(true) }
+    var adding by remember { mutableStateOf(false) }
+    val (consumables, keepsakes) = state.items.values
+        .sortedBy { it.name.lowercase() }
+        .partition { it.consumable }
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().height(Space.toolbarHeight).padding(horizontal = Space.md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text.navInventory, style = MaterialTheme.typography.headlineSmall, color = theme.text)
+        CatalogueHeader(text.navInventory, text.inventorySubtitle) {
+            AddButton(text.actionNewItem, onClick = { adding = !adding })
         }
         HLine()
-
-        Column(Modifier.fillMaxWidth().padding(Space.md)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Box(Modifier.weight(1f)) {
-                    QuestTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        placeholder = text.fieldName,
-                        onFocusChange = { app.typing = it },
-                        onImeAction = {
-                            if (name.isNotBlank()) {
-                                app.store.createItem(name, consumable = consumable)
-                                name = ""
-                            }
-                        },
-                    )
-                }
-                QuestButton(text.actionAdd, primary = true, enabled = name.isNotBlank(), onClick = {
-                    app.store.createItem(name, consumable = consumable)
-                    name = ""
-                })
-            }
-            ToggleRow(text.fieldConsumable, consumable, { consumable = it })
+        if (adding) {
+            NewItemForm(app, onDone = { adding = false })
+            HLine()
         }
 
         if (state.items.isEmpty()) {
@@ -244,44 +206,81 @@ public fun InventoryScreen(
             return@Column
         }
 
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = Space.md)) {
-            items(state.items.values.sortedBy { it.name.lowercase() }, key = { it.id }) { item ->
-                ItemCard(app, item)
-                Spacer(Modifier.height(Space.sm))
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = Space.xl),
+            contentPadding = PaddingValues(bottom = Space.xl),
+            verticalArrangement = Arrangement.spacedBy(Space.sm),
+        ) {
+            if (consumables.isNotEmpty()) {
+                item(key = "consumables") { CatalogueSection(text.sectionConsumables) }
+                items(consumables, key = { it.id }) { item -> ItemRow(app, item) }
+            }
+            if (keepsakes.isNotEmpty()) {
+                item(key = "keepsakes") { CatalogueSection(text.sectionKeepsakes) }
+                items(keepsakes, key = { it.id }) { item -> ItemRow(app, item) }
             }
         }
     }
 }
 
 @Composable
-private fun ItemCard(app: AppState, item: InventoryItem) {
+private fun ItemRow(app: AppState, item: InventoryItem) {
     val text = strings
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(theme.card, RoundedCornerShape(Radii.md))
-            .padding(Space.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.sm),
-    ) {
-        QuestIcon(Glyph.BOX, size = 16.dp, tint = theme.accent)
-        Column(Modifier.weight(1f)) {
-            Text(item.name, style = MaterialTheme.typography.titleMedium, color = theme.text)
-            Text(
-                if (item.consumable) text.fieldConsumable else text.fieldNone,
-                style = MaterialTheme.typography.bodySmall,
-                color = theme.textFaint,
+    val usable = !item.consumable || item.quantity > 0
+    CatalogueRow(
+        glyph = Glyph.BOX,
+        tint = theme.accent,
+        name = item.name,
+        description = text.itemDescription(item.consumable),
+        available = usable,
+        price = null,
+        status = when {
+            !item.consumable -> null
+            item.quantity == 0 -> text.itemOutOfStock
+            else -> text.youHave(item.quantity)
+        },
+        statusWarning = item.consumable && item.quantity == 0,
+        action = {
+            QuestButton(
+                text = text.actionUse,
+                primary = usable,
+                enabled = usable,
+                compact = true,
+                onClick = { app.store.useItem(item.id) },
             )
+        },
+        secondary = {
+            IconAction(Glyph.PLUS, text.actionRestock, size = 26.dp, onClick = { app.store.adjustItemStock(item.id, 1) })
+            IconAction(Glyph.TRASH, text.actionDelete, size = 26.dp, onClick = { app.store.deleteItem(item.id) })
+        },
+    )
+}
+
+@Composable
+private fun NewItemForm(app: AppState, onDone: () -> Unit) {
+    val text = strings
+    var name by remember { mutableStateOf("") }
+    var consumable by remember { mutableStateOf(true) }
+    fun save() {
+        if (name.isBlank()) return
+        app.store.createItem(name, consumable = consumable)
+        onDone()
+    }
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = Space.xl, vertical = Space.md)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            Box(Modifier.weight(1f)) {
+                QuestTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = text.fieldName,
+                    onFocusChange = { app.typing = it },
+                    onImeAction = { save() },
+                )
+            }
+            QuestButton(text.actionAdd, primary = true, enabled = name.isNotBlank(), onClick = { save() })
         }
-        Pill("×${item.quantity}", color = theme.textMuted)
-        IconAction(Glyph.PLUS, text.actionRestock, size = 26.dp, onClick = { app.store.adjustItemStock(item.id, 1) })
-        QuestButton(
-            text = text.actionUse,
-            compact = true,
-            enabled = !item.consumable || item.quantity > 0,
-            onClick = { app.store.useItem(item.id) },
-        )
-        IconAction(Glyph.TRASH, text.actionDelete, size = 26.dp, onClick = { app.store.deleteItem(item.id) })
+        ToggleRow(text.fieldConsumable, consumable, { consumable = it })
     }
 }
 

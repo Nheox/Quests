@@ -180,6 +180,15 @@ public object StringsEn : Strings {
     override val actionMoveUnder: String = "Move under…"
     override val actionAddInline: String = "+ add"
     override val actionChange: String = "change"
+    override val rewardsSubtitle: String = "Treats you set yourself, paid for with points"
+    override val inventorySubtitle: String = "Things you own; consumables run out as you use them"
+    override val sectionReadyToClaim: String = "Ready to claim"
+    override val sectionSavingUp: String = "Saving up for"
+    override val sectionConsumables: String = "Consumables"
+    override val sectionKeepsakes: String = "Keepsakes"
+    override val actionNewReward: String = "New reward"
+    override val actionNewItem: String = "New item"
+    override val itemOutOfStock: String = "out of stock"
     override val fieldParent: String = "Parent quest"
     override val topLevel: String = "Top level"
     override val repeatNever: String = "Doesn't repeat"
@@ -324,6 +333,30 @@ public object StringsEn : Strings {
 
     override fun useRepetition(repetition: Repetition?): String =
         repetition?.let { repetitionLabel(it) } ?: "Type a number and a unit, e.g. 3 days"
+
+    override fun youHavePoints(points: Int): String = "You have ${pointsAmount(points)}"
+
+    override fun morePointsNeeded(points: Int): String =
+        if (points == 1) "1 more point needed" else "${grouped(points.toLong())} more points needed"
+
+    override fun rewardDescription(claimCount: Int, costIncrement: Int?, incrementEvery: Int?): String {
+        val claimed = when (claimCount) {
+            0 -> "never claimed"
+            1 -> "claimed once"
+            else -> "claimed $claimCount times"
+        }
+        val rises = if (costIncrement != null && incrementEvery != null && costIncrement > 0 && incrementEvery > 0) {
+            val after = if (incrementEvery == 1) "every claim" else "every $incrementEvery claims"
+            "+${pointsAmount(costIncrement)} after $after"
+        } else {
+            null
+        }
+        return listOfNotNull(claimed, rises).joinToString(" · ")
+    }
+
+    override fun itemDescription(consumable: Boolean): String = if (consumable) "consumable" else "keeps"
+
+    override fun youHave(quantity: Int): String = "you have $quantity"
 
     override fun questsMoved(count: Int): String = if (count == 1) "Moved 1 quest" else "Moved $count quests"
 
