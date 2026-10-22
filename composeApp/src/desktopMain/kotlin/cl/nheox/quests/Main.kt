@@ -33,6 +33,7 @@ import cl.nheox.quests.events.Compaction
 import cl.nheox.quests.events.DeviceIdentity
 import cl.nheox.quests.events.FileEventLog
 import cl.nheox.quests.events.Vault
+import cl.nheox.quests.export.BranchExport
 import cl.nheox.quests.export.Exporter
 import cl.nheox.quests.i18n.Strings
 import cl.nheox.quests.i18n.Translations
@@ -471,7 +472,7 @@ private fun ApplicationScope.AppWindows(
 
     val actions = remember {
         AppActions(
-            quickAdd = { line -> applyQuickAdd(runtime.store, line, runtime.clock, app) },
+            quickAdd = { line -> applyQuickAdd(runtime.store, line, runtime.clock, app, app.defaultDueDate()) },
             exportNow = {
                 val result = runtime.exporter.exportAll(runtime.store.state.value)
                 app.notify(
@@ -517,6 +518,16 @@ private fun ApplicationScope.AppWindows(
                     }
                 }
             },
+            exportBranch = { id ->
+                val current = runtime.store.state.value
+                val quest = current.quests[id]
+                val markdown = BranchExport.render(current, id, runtime.clock)
+                if (quest != null && markdown != null) {
+                    val savedAs = runCatching { runtime.exporter.writeBranch(BranchExport.fileName(quest), markdown) }.getOrNull()
+                    app.notify(strings.branchExported(savedAs, DesktopServices.copyToClipboard(markdown)))
+                }
+            },
+            copyText = { text -> DesktopServices.copyToClipboard(text) },
             copyQuestAsText = { id ->
                 val quest = runtime.store.state.value.quests[id]
                 if (quest != null && DesktopServices.copyToClipboard(questAsText(quest, runtime.store.state.value))) {
@@ -584,7 +595,11 @@ private fun ApplicationScope.AppWindows(
                 QuickCaptureContent(
                     clock = runtime.clock,
                     text = strings,
-                    onSubmit = { line -> applyQuickAdd(runtime.store, line, runtime.clock, app) },
+                    // Not handed the main window's state: a capture must not
+                    // close or select anything in a window the user is not
+                    // looking at, least of all a quest they are halfway
+                    // through starting there.
+                    onSubmit = { line -> applyQuickAdd(runtime.store, line, runtime.clock, app = null) },
                     onDismiss = {
                         shell.captureVisible = false
                         // A capture-only launch has no other window, so letting
@@ -662,6 +677,7 @@ internal fun applyQuickAdd(
     line: String,
     clock: Clock,
     app: AppState?,
+    defaultDue: java.time.LocalDate? = null,
 ): String? {
     val parsed: QuickAddResult = QuickAdd.parse(line, clock.today())
     if (parsed.title.isBlank()) return null
@@ -674,7 +690,7 @@ internal fun applyQuickAdd(
             fear = parsed.fear ?: cl.nheox.quests.domain.Fear.DEFAULT,
             urgency = parsed.urgency ?: cl.nheox.quests.domain.Urgency.DEFAULT,
             estimatedMinutes = parsed.estimatedMinutes,
-            dueDate = parsed.dueDate,
+            dueDate = parsed.dueDate ?: defaultDue,
             dueTime = parsed.dueTime,
             repetition = parsed.repetition,
             skillIds = skillIds,

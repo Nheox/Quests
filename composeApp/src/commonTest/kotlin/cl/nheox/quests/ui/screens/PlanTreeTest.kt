@@ -36,7 +36,7 @@ class PlanTreeTest {
         updatedAt = created,
     )
 
-    private fun rows(vararg quests: Quest, collapsed: Map<String, Boolean> = emptyMap()): List<Pair<String, Int>> =
+    private fun rows(vararg quests: Quest, collapsed: Set<String> = emptySet()): List<Pair<String, Int>> =
         flatten(QuestsState(quests = quests.associateBy { it.id }), collapsed, clock).map { it.quest.id to it.depth }
 
     @Test
@@ -74,6 +74,16 @@ class PlanTreeTest {
             quest("grandchild", parent = "open"),
         )
         assertEquals(listOf("root" to 0, "open" to 1, "grandchild" to 2), rows(*tree))
-        assertEquals(listOf("root" to 0, "open" to 1), rows(*tree, collapsed = mapOf("open" to true)))
+        assertEquals(listOf("root" to 0, "open" to 1), rows(*tree, collapsed = setOf("open")))
+    }
+
+    @Test
+    fun `an open quest under a finished one stands at the top level`() {
+        val tree = arrayOf(
+            quest("done-root", state = QuestState.DONE),
+            quest("reopened", parent = "done-root"),
+            quest("its-child", parent = "reopened"),
+        )
+        assertEquals(listOf("reopened" to 0, "its-child" to 1), rows(*tree))
     }
 }

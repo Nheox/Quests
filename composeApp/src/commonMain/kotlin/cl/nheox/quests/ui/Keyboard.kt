@@ -26,6 +26,9 @@ public class AppActions(
     public val openFolder: () -> Unit,
     public val chooseFolder: () -> Unit,
     public val copyQuestAsText: (String) -> Unit,
+    /** Writes a quest and everything under it as Markdown, and copies it. */
+    public val exportBranch: (String) -> Unit,
+    public val copyText: (String) -> Boolean,
 )
 
 /**
@@ -159,6 +162,28 @@ public object Shortcuts {
                 true
             }
 
+            // In the tree, the way every tree on the desktop works: right
+            // unfolds a branch, left folds it, and left on a folded or bare
+            // row goes up to its parent.
+            Key.DirectionRight -> {
+                val quest = state.quests[selected ?: return false]
+                if (app.currentView != QuestView.PLAN || quest == null) return false
+                app.setCollapsed(quest.id, false)
+                true
+            }
+
+            Key.DirectionLeft -> {
+                val quest = state.quests[selected ?: return false]
+                if (app.currentView != QuestView.PLAN || quest == null) return false
+                val unfolded = quest.id !in app.planCollapsed && state.children(quest.id).any { it.isOpen }
+                if (unfolded) {
+                    app.setCollapsed(quest.id, true)
+                } else {
+                    state.quests[quest.parentId]?.takeIf { it.isOpen }?.let { app.selectedId = it.id }
+                }
+                true
+            }
+
             Key.Slash -> {
                 if (event.isShiftPressed) app.go(Route.Help) else app.openSearch()
                 true
@@ -243,7 +268,11 @@ public object Shortcuts {
             }
 
             Key.P -> {
-                selected?.let { app.store.promoteToTopLevel(it) }
+                if (event.isShiftPressed) {
+                    selected?.let { app.showInPlan(it, state) }
+                } else {
+                    selected?.let { app.store.promoteToTopLevel(it) }
+                }
                 selected != null
             }
 
@@ -273,7 +302,11 @@ public object Shortcuts {
             }
 
             Key.S -> {
-                selected?.let { actions.copyQuestAsText(it) }
+                if (event.isShiftPressed) {
+                    selected?.let { actions.exportBranch(it) }
+                } else {
+                    selected?.let { actions.copyQuestAsText(it) }
+                }
                 selected != null
             }
 
@@ -309,6 +342,9 @@ public object Shortcuts {
         "Ctrl+," to "Settings",
         "Ctrl+0" to "Standing, where things stand at a glance",
         "Shift+M" to "Move the selected quests under another quest",
+        "Shift+P" to "Show the selected quest in Plan",
+        "Shift+S" to "Export the selected quest and its sub-quests as Markdown",
+        "← →" to "Fold and unfold a branch in Plan",
         "Ctrl+1…9" to "Jump to a view",
         "↑ ↓" to "Move the cursor (j and k also work)",
         "Space" to "Complete the selected quest (c also works)",

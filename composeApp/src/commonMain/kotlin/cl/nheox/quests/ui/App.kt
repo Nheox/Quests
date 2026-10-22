@@ -21,10 +21,12 @@ import androidx.compose.foundation.focusable
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.i18n.Translations
+import cl.nheox.quests.ui.components.FloatingAddButton
 import cl.nheox.quests.ui.components.VLine
 import cl.nheox.quests.ui.screens.HelpScreen
 import cl.nheox.quests.ui.screens.InsightScreen
 import cl.nheox.quests.ui.screens.InventoryScreen
+import cl.nheox.quests.ui.screens.NewQuestPane
 import cl.nheox.quests.ui.screens.PlanScreen
 import cl.nheox.quests.ui.screens.QuestEditorPane
 import cl.nheox.quests.ui.screens.QuestListScreen
@@ -35,6 +37,8 @@ import cl.nheox.quests.ui.screens.SkillsScreen
 import cl.nheox.quests.ui.screens.StandingScreen
 import cl.nheox.quests.ui.theme.Motion
 import cl.nheox.quests.ui.theme.QuestsTheme
+import cl.nheox.quests.ui.theme.Space
+import androidx.compose.foundation.layout.padding
 import cl.nheox.quests.ui.theme.theme
 
 /**
@@ -85,14 +89,13 @@ public fun QuestsApp(
                                     app = app,
                                     state = state,
                                     quests = app.visibleQuests(state),
-                                    onQuickAdd = actions.quickAdd,
                                 )
                             }
 
                             Route.Skills -> SkillsScreen(app, state)
                             Route.Rewards -> RewardsScreen(app, state)
                             Route.Inventory -> InventoryScreen(app, state)
-                            Route.Scratchpad -> ScratchpadScreen(app, state)
+                            Route.Scratchpad -> ScratchpadScreen(app, state, onCopy = actions.copyText)
                             Route.Insight -> InsightScreen(app, state)
                             Route.Help -> HelpScreen()
                             Route.Settings -> SettingsScreen(
@@ -106,12 +109,29 @@ public fun QuestsApp(
                             )
                         }
                     }
+
+                    // Over every list a quest can be added to; finished
+                    // quests are not added, so their lists go without.
+                    val view = app.currentView
+                    if (view != null && view != QuestView.COMPLETED && view != QuestView.FAILED) {
+                        FloatingAddButton(
+                            description = strings.actionNewQuest,
+                            shortcut = "Ctrl+N",
+                            onClick = { app.openQuickAdd() },
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(Space.xl),
+                        )
+                    }
                 }
 
-                // The editor only takes its column when there is something in it.
-                if (app.selectedId != null && app.route is Route.Quests) {
+                // The detail column only takes its place when there is
+                // something in it: a quest, or one being started.
+                if (app.route is Route.Quests && (app.quickAddOpen || app.selectedId != null)) {
                     VLine()
-                    QuestEditorPane(app, state)
+                    if (app.quickAddOpen) {
+                        NewQuestPane(app, onCreate = actions.quickAdd)
+                    } else {
+                        QuestEditorPane(app, state)
+                    }
                 }
             }
 

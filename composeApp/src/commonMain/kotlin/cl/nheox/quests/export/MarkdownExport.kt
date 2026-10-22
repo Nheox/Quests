@@ -113,6 +113,16 @@ public object MarkdownExport {
             },
         )
         append(escape(quest.title))
+        val facts = facts(quest, state)
+        if (facts.isNotEmpty()) {
+            append("  \n      _")
+            append(facts.joinToString(" · "))
+            append("_")
+        }
+    }
+
+    /** What there is to say about a quest beyond its title, as short phrases. */
+    internal fun facts(quest: Quest, state: QuestsState): List<String> {
         val facts = mutableListOf<String>()
         quest.dueDate?.let { date ->
             facts += "due " + dateFormat.format(date) + (quest.dueTime?.let { " ${it}" } ?: "")
@@ -123,15 +133,11 @@ public object MarkdownExport {
         quest.rewardBonus?.takeIf { it > 0 }?.let { facts += "+$it bonus points" }
         val skills = state.skillsOf(quest)
         if (skills.isNotEmpty()) facts += skills.joinToString(", ") { "#" + it.name.replace(' ', '-') }
-        if (facts.isNotEmpty()) {
-            append("  \n      _")
-            append(facts.joinToString(" · "))
-            append("_")
-        }
+        return facts
     }
 
     /** Keeps a quest title with a pipe or an underscore from breaking a table. */
-    private fun escape(text: String): String = text
+    internal fun escape(text: String): String = text
         .replace("|", "\\|")
         .replace("*", "\\*")
         .replace("_", "\\_")

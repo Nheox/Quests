@@ -80,7 +80,19 @@ public interface Strings {
     public val actionRestock: String
     public val actionPickRandom: String
     public val actionShareAsText: String
-    public val actionSelectAll: String
+    public val actionShowInPlan: String
+    public val actionCreateQuest: String
+    public val newQuestTitleHint: String
+    public val newQuestShowSyntax: String
+    public val newQuestHideSyntax: String
+
+    /** "Due today unless the title gives a date": the default a list's own day sets. */
+    public fun newQuestDefaultDue(due: LocalDate, today: LocalDate): String
+    public val actionExportBranch: String
+    public val actionExpandAll: String
+    public val actionCollapseAll: String
+    public val actionCopyAll: String
+    public val actionClearFinished: String
     public val actionClearSelection: String
     public val actionCommandPalette: String
     public val actionQuickCapture: String
@@ -288,6 +300,15 @@ public interface Strings {
     public val scratchpadPlaceholder: String
     public val scratchpadGlobal: String
     public val scratchpadForQuest: String
+
+    /** "Cleared 3 finished lines". */
+    public fun scratchpadCleared(count: Int): String
+
+    /**
+     * What exporting a branch did: saved as [savedAs] (a path inside the data
+     * folder, or null if writing failed) and [copied] to the clipboard or not.
+     */
+    public fun branchExported(savedAs: String?, copied: Boolean): String
     public val skillsEmpty: String
     public val rewardsEmpty: String
     public val inventoryEmpty: String

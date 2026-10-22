@@ -77,7 +77,9 @@ public fun UndoBar(
         Row(
             Modifier
                 .padding(Space.md)
-                .widthIn(min = 320.dp)
+                // Capped, so it stays at the bottom left and never reaches the
+                // add button floating in the bottom-right corner.
+                .widthIn(min = 320.dp, max = 480.dp)
                 .background(theme.card, RoundedCornerShape(Radii.md))
                 .padding(horizontal = Space.md, vertical = Space.sm),
             verticalAlignment = Alignment.CenterVertically,

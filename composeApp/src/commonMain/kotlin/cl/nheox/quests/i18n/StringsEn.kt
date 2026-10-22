@@ -71,7 +71,21 @@ public object StringsEn : Strings {
     override val actionRestock: String = "Add one"
     override val actionPickRandom: String = "Pick a random quest"
     override val actionShareAsText: String = "Copy as text"
-    override val actionSelectAll: String = "Select all"
+    override val actionShowInPlan: String = "Show in Plan"
+    override val actionCreateQuest: String = "Create quest"
+    override val newQuestTitleHint: String = "Details can go in the title too. Everything else can be set once the quest exists."
+    override val newQuestShowSyntax: String = "What the title understands"
+    override val newQuestHideSyntax: String = "Hide"
+
+    override fun newQuestDefaultDue(due: LocalDate, today: LocalDate): String {
+        val day = if (due == today) "today" else if (due == today.plusDays(1)) "tomorrow" else longDate(due)
+        return "Due $day unless the title gives a date"
+    }
+    override val actionExportBranch: String = "Export branch"
+    override val actionExpandAll: String = "Expand all"
+    override val actionCollapseAll: String = "Collapse all"
+    override val actionCopyAll: String = "Copy all"
+    override val actionClearFinished: String = "Clear finished"
     override val actionClearSelection: String = "Clear selection"
     override val actionCommandPalette: String = "Command palette"
     override val actionQuickCapture: String = "Quick capture"
@@ -279,6 +293,16 @@ public object StringsEn : Strings {
     override val scratchpadPlaceholder: String = "Add a line…"
     override val scratchpadGlobal: String = "Scratchpad"
     override val scratchpadForQuest: String = "Checklist"
+
+    override fun scratchpadCleared(count: Int): String =
+        if (count == 1) "Cleared 1 finished line" else "Cleared $count finished lines"
+
+    override fun branchExported(savedAs: String?, copied: Boolean): String = when {
+        savedAs != null && copied -> "Branch copied, and saved as $savedAs"
+        savedAs != null -> "Branch saved as $savedAs"
+        copied -> "Branch copied. It could not be saved to the export folder."
+        else -> "The branch could not be exported"
+    }
     override val skillsEmpty: String = "No skills yet. Add one, then link quests to it."
     override val rewardsEmpty: String = "No rewards yet. Add something worth working for."
     override val inventoryEmpty: String = "Nothing in the inventory."

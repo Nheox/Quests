@@ -107,13 +107,20 @@ public data class QuestsState(
     public fun roots(): List<Quest> =
         quests.values.filter { it.parentId == null || it.parentId !in quests }
 
-    /** Every descendant of a quest, depth first. Used by export and by delete. */
+    /**
+     * A quest and every descendant, breadth first. Used by delete.
+     *
+     * Each quest is visited once, so a parent cycle in a hand-edited log ends
+     * the walk instead of looping forever.
+     */
     public fun branch(id: String): List<Quest> {
         val root = quests[id] ?: return emptyList()
         val out = mutableListOf(root)
+        val seen = mutableSetOf(id)
         val queue = ArrayDeque(children(id))
         while (queue.isNotEmpty()) {
             val next = queue.removeFirst()
+            if (!seen.add(next.id)) continue
             out += next
             queue.addAll(children(next.id))
         }

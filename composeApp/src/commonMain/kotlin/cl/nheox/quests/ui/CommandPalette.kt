@@ -124,6 +124,15 @@ public fun commands(
         out += Command(text.actionShareAsText, Glyph.COPY, "S", text.sectionQuests) {
             actions.copyQuestAsText(selected)
         }
+        out += Command(text.actionExportBranch, Glyph.TREE, "Shift+S", text.sectionQuests) {
+            actions.exportBranch(selected)
+        }
+        // Plan shows open quests only, so a finished one has no place there.
+        if (state.quests[selected]?.isOpen == true && app.currentView != QuestView.PLAN) {
+            out += Command(text.actionShowInPlan, Glyph.TREE, "Shift+P", text.sectionQuests) {
+                app.showInPlan(selected, state)
+            }
+        }
     }
 
     if (targets.isNotEmpty()) {

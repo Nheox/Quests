@@ -584,6 +584,17 @@ public class QuestStore(
         emit(Event.NoteDeleted(clock.now(), stamp(), device.id, id))
     }
 
+    /**
+     * Deletes the global scratchpad lines that are finished — ticked, or
+     * already turned into quests — and returns how many went. Lines attached
+     * to a quest are that quest's checklist and are left alone.
+     */
+    public fun clearFinishedNotes(): Int {
+        val finished = _state.value.globalNotes().filter { it.done || it.promotedToQuestId != null }
+        finished.forEach { deleteNote(it.id) }
+        return finished.size
+    }
+
     public fun toggleNote(id: String) {
         val note = _state.value.notes[id] ?: return
         changeNote(id, FieldPatch().set(cl.nheox.quests.events.NoteFields.DONE, !note.done))

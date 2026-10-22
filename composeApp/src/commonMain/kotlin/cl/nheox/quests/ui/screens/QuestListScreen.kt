@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,10 +38,11 @@ import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.Sorting
 import cl.nheox.quests.projection.QuestsState
 import cl.nheox.quests.ui.AppState
-import cl.nheox.quests.ui.components.AddButton
+import cl.nheox.quests.ui.components.FloatingButtonClearance
 import cl.nheox.quests.ui.components.EmptyState
 import cl.nheox.quests.ui.components.HLine
 import cl.nheox.quests.ui.components.IconAction
+import cl.nheox.quests.ui.components.KeepInView
 import cl.nheox.quests.ui.components.Pill
 import cl.nheox.quests.ui.components.QuestButton
 import cl.nheox.quests.ui.components.QuestRow
@@ -64,20 +66,16 @@ public fun QuestListScreen(
     state: QuestsState,
     quests: List<Quest>,
     modifier: Modifier = Modifier,
-    onQuickAdd: (String) -> Unit,
 ) {
     val view = app.currentView ?: QuestView.ALL
     val text = strings
     val today = app.clock.today()
+    // One per view, so each list keeps its own scroll position.
+    val listState = remember(view) { LazyListState() }
 
     Column(modifier.fillMaxSize()) {
         ListToolbar(app, state, quests.size)
         HLine()
-
-        if (app.quickAddOpen) {
-            QuickAddBar(app, onSubmit = onQuickAdd)
-            HLine()
-        }
 
         if (app.marked.isNotEmpty()) {
             BulkBar(app, state)
@@ -103,23 +101,31 @@ public fun QuestListScreen(
             return@Column
         }
 
-        // Today's filter is "due today or earlier", so it genuinely contains two
-        // kinds of thing and the buckets earn their headers under a plain sort.
-        // Priority and random are the two sorts grouping would fight: priority
-        // already weighs how late a quest is against everything else and places
-        // pins at the very top and bottom, and the screen must show the same
-        // sequence the arrow keys walk.
-        val grouped = view in setOf(QuestView.TODAY, QuestView.OVERDUE, QuestView.ALL) &&
-            app.sort.key != SortKey.RANDOM && app.sort.key != SortKey.PRIORITY
+        // [quests] is already in the order shown, buckets included (see
+        // AppState.visibleQuests); grouping it again only finds the headings.
+        val buckets = if (app.grouped(view)) Sorting.groupByDue(quests, app.clock) else null
+        // Each bucket adds its heading as an item before its rows.
+        val selectedIndex = quests.indexOfFirst { it.id == app.selectedId }.let { index ->
+            if (index < 0 || buckets == null) {
+                index
+            } else {
+                val bucket = Sorting.bucketOf(quests[index], app.clock.today())
+                index + buckets.keys.count { it <= bucket }
+            }
+        }
+        KeepInView(listState, selectedIndex)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = Space.lg),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.md),
+            state = listState,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = Space.md,
+                bottom = FloatingButtonClearance,
+            ),
             // Cards, not lines: a gap between rows instead of a rule.
             verticalArrangement = Arrangement.spacedBy(Space.sm),
         ) {
-            if (grouped) {
-                val buckets = Sorting.groupByDue(quests, app.clock)
+            if (buckets != null) {
                 buckets.forEach { (bucket, bucketQuests) ->
                     item(key = "header-" + bucket.name) {
                         BucketHeader(bucket, bucketQuests.size)
@@ -218,7 +224,6 @@ private fun ListToolbar(app: AppState, state: QuestsState, count: Int) {
                 app.selectRandom(app.visibleQuests(state))
             })
             SortControl(app)
-            AddButton(text.actionNewQuest, onClick = { app.openQuickAdd() })
         }
     }
 }
@@ -303,33 +308,43 @@ internal fun QuickAddBar(app: AppState, onSubmit: (String) -> Unit) {
             IconAction(Glyph.CROSS, text.actionClose, onClick = { app.closeQuickAdd() })
         }
 
-        val parsed = remember(app.quickAddText) {
-            cl.nheox.quests.domain.QuickAdd.parse(app.quickAddText, app.clock.today())
-        }
         if (app.quickAddText.isNotBlank()) {
             Spacer(Modifier.height(Space.sm))
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.xs), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = parsed.title.ifBlank { "…" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = theme.textMuted,
-                )
-                parsed.difficulty?.let { Pill(text.difficulty(it), color = cl.nheox.quests.ui.theme.Palette.of(it)) }
-                parsed.fear?.let { Pill(text.fear(it), color = cl.nheox.quests.ui.theme.Palette.of(it)) }
-                parsed.urgency?.let { Pill(text.urgency(it), color = cl.nheox.quests.ui.theme.Palette.of(it)) }
-                parsed.estimatedMinutes?.let { Pill(cl.nheox.quests.domain.Dates.formatMinutes(it), leading = Glyph.CLOCK) }
-                parsed.dueDate?.let { date ->
-                    Pill(
-                        date.toString() + (parsed.dueTime?.let { " $it" } ?: ""),
-                        leading = Glyph.CALENDAR,
-                        color = theme.accent,
-                    )
-                }
-                parsed.repetition?.let { Pill(text.repeatsEvery(it.every, text.repeatUnit(it.unit)), leading = Glyph.REPEAT) }
-                parsed.skillNames.forEach { Pill("#$it", color = theme.progression, leading = Glyph.SPARK) }
-            }
+            QuickAddPreview(app.quickAddText, app.clock.today())
         }
         androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
+    }
+}
+
+/**
+ * What a quick-add line will become, read back as it is typed: the title it
+ * leaves, then a pill for each field the line set. Seeing "#thesis" turn into
+ * a skill before pressing Enter is how the syntax gets learnt.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun QuickAddPreview(line: String, today: LocalDate) {
+    val text = strings
+    val parsed = remember(line, today) { cl.nheox.quests.domain.QuickAdd.parse(line, today) }
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Space.xs),
+        verticalArrangement = Arrangement.spacedBy(Space.xs),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = parsed.title.ifBlank { "…" },
+            style = MaterialTheme.typography.bodySmall,
+            color = theme.textMuted,
+        )
+        parsed.difficulty?.let { Pill(text.difficulty(it), color = cl.nheox.quests.ui.theme.Palette.of(it)) }
+        parsed.fear?.let { Pill(text.fear(it), color = cl.nheox.quests.ui.theme.Palette.of(it)) }
+        parsed.urgency?.let { Pill(text.urgency(it), color = cl.nheox.quests.ui.theme.Palette.of(it)) }
+        parsed.estimatedMinutes?.let { Pill(text.durationShort(it), leading = Glyph.CLOCK) }
+        parsed.dueDate?.let { date ->
+            Pill(text.dueMeta(date, parsed.dueTime, today), leading = Glyph.CALENDAR, color = theme.accent)
+        }
+        parsed.repetition?.let { Pill(text.repeatsEvery(it.every, text.repeatUnit(it.unit)), leading = Glyph.REPEAT) }
+        parsed.skillNames.forEach { Pill("#$it", color = theme.progression, leading = Glyph.SPARK) }
     }
 }
 

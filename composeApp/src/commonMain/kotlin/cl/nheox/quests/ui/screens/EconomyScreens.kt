@@ -294,11 +294,13 @@ private fun NewItemForm(app: AppState, onDone: () -> Unit) {
 public fun ScratchpadScreen(
     app: AppState,
     state: QuestsState,
+    onCopy: (String) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val text = strings
     var line by remember { mutableStateOf("") }
     val entries = state.globalNotes()
+    val finished = entries.count { it.done || it.promotedToQuestId != null }
 
     Column(modifier.fillMaxSize()) {
         Row(
@@ -308,6 +310,17 @@ public fun ScratchpadScreen(
         ) {
             Text(text.scratchpadGlobal, style = MaterialTheme.typography.headlineSmall, color = theme.text)
             Pill(entries.count { !it.done }.toString(), color = theme.textMuted)
+            Spacer(Modifier.weight(1f))
+            // As a Markdown checklist, which pastes as one into most notes apps.
+            QuestButton(text.actionCopyAll, compact = true, glyph = Glyph.COPY, enabled = entries.isNotEmpty(), onClick = {
+                val markdown = entries.joinToString("\n") { entry ->
+                    (if (entry.done || entry.promotedToQuestId != null) "- [x] " else "- [ ] ") + entry.text
+                }
+                if (onCopy(markdown)) app.notify(text.messageCopied)
+            })
+            QuestButton(text.actionClearFinished, compact = true, glyph = Glyph.TRASH, enabled = finished > 0, onClick = {
+                app.notify(text.scratchpadCleared(app.store.clearFinishedNotes()))
+            })
         }
         HLine()
 

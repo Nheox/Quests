@@ -40,6 +40,16 @@ public class Exporter(
         return Result(ics, markdown, errors)
     }
 
+    /**
+     * Writes an exported branch to `export/branches/` and returns the path,
+     * relative to the data folder, to tell the user where it went.
+     */
+    public fun writeBranch(fileName: String, markdown: String): String {
+        val target = vault.exportDir.resolve(BRANCHES_DIR).resolve(fileName)
+        writeAtomically(target, markdown)
+        return vault.root.relativize(target).toString()
+    }
+
     private fun writeAtomically(target: Path, content: String): Path {
         Files.createDirectories(target.parent)
         val temp = target.resolveSibling(target.fileName.toString() + ".tmp")
@@ -62,5 +72,6 @@ public class Exporter(
     public companion object {
         public const val ICS_NAME: String = "quests.ics"
         public const val MARKDOWN_NAME: String = "quests.md"
+        public const val BRANCHES_DIR: String = "branches"
     }
 }

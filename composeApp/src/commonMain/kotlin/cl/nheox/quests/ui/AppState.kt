@@ -8,11 +8,13 @@ import cl.nheox.quests.domain.Energy
 import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.QuestView
+import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.SortOrder
 import cl.nheox.quests.domain.Sorting
 import cl.nheox.quests.domain.Views
 import cl.nheox.quests.projection.QuestStore
 import cl.nheox.quests.projection.QuestsState
+import cl.nheox.quests.ui.screens.flatten
 
 /** Which top-level screen is showing. */
 public sealed interface Route {
@@ -35,6 +37,8 @@ public sealed interface Route {
 
     public data object Help : Route
 }
+
+private val GroupedViews = setOf(QuestView.TODAY, QuestView.OVERDUE, QuestView.ALL)
 
 /** The screen a [LaunchView] setting opens the app on. */
 public fun launchRoute(view: LaunchView): Route = when (view) {
@@ -112,6 +116,14 @@ public class AppState(
 
     public var suggesterMinutes: Int by mutableStateOf(30)
 
+    /**
+     * The Plan branches folded away. Here rather than in the Plan screen so the
+     * arrow keys walk the same rows the tree shows, and so a branch stays
+     * folded while the user is off in another view.
+     */
+    public var planCollapsed: Set<String> by mutableStateOf(emptySet())
+        private set
+
     /** The skills the Balance radar shows; null means the strongest few. Kept for the session. */
     public var radarSkills: Set<String>? by mutableStateOf(null)
 
@@ -144,8 +156,25 @@ public class AppState(
         searchQuery = ""
     }
 
+    /**
+     * Starts a new quest. In a list it opens in the detail column; on
+     * Standing, as a bar under the title. Anywhere else there is nowhere to
+     * show it, so it opens over Today, where a new quest most often belongs.
+     */
     public fun openQuickAdd() {
+        if (route !is Route.Quests && route != Route.Standing) go(Route.Quests(QuestView.TODAY))
         quickAddOpen = true
+    }
+
+    /**
+     * The due date a quest added here takes when its title gives none: the
+     * day a dated list is about, so the new quest shows up in the list it was
+     * added from. Other lists add undated quests.
+     */
+    public fun defaultDueDate(): java.time.LocalDate? = when (currentView) {
+        QuestView.TODAY -> clock.today()
+        QuestView.TOMORROW -> clock.today().plusDays(1)
+        else -> null
     }
 
     public fun closeQuickAdd() {
@@ -184,15 +213,58 @@ public class AppState(
      * half-remember is not a question about today, and having to guess which
      * list it is in before searching would make the search useless.
      */
+    /**
+     * The quests the current view shows, in the order it shows them — which
+     * is the order the arrow keys walk, so the cursor never jumps somewhere
+     * the eye did not expect. Plan is its tree, a grouped list its groups.
+     */
     public fun visibleQuests(state: QuestsState): List<Quest> {
         val view = currentView ?: return emptyList()
         val query = searchQuery.trim()
-        val pool = if (searchOpen && query.isNotEmpty()) {
-            search(state, query)
-        } else {
-            Views.filter(view, state.quests.values, clock)
+        val searching = searchOpen && query.isNotEmpty()
+        if (view == QuestView.PLAN && !searching) {
+            return flatten(state, planCollapsed, clock).map { it.quest }
         }
-        return Sorting.sort(pool, sort, state.skills, randomSeed, clock)
+        val pool = if (searching) search(state, query) else Views.filter(view, state.quests.values, clock)
+        val sorted = Sorting.sort(pool, sort, state.skills, randomSeed, clock)
+        return if (grouped(view)) Sorting.groupByDue(sorted, clock).values.flatten() else sorted
+    }
+
+    /**
+     * Whether a list shows its quests under due-date headings.
+     *
+     * Today's filter is "due today or earlier", so it genuinely contains two
+     * kinds of thing and the headings earn their place under a plain sort.
+     * Priority and random are the two sorts grouping would fight: priority
+     * already weighs how late a quest is against everything else and places
+     * pins at the very top and bottom.
+     */
+    public fun grouped(view: QuestView): Boolean =
+        view in GroupedViews && sort.key != SortKey.RANDOM && sort.key != SortKey.PRIORITY
+
+    /** Folds or unfolds a Plan branch. */
+    public fun setCollapsed(id: String, collapsed: Boolean) {
+        planCollapsed = if (collapsed) planCollapsed + id else planCollapsed - id
+    }
+
+    public fun expandAll() {
+        planCollapsed = emptySet()
+    }
+
+    /** Folds every branch that has open sub-quests, leaving the top level. */
+    public fun collapseAll(state: QuestsState) {
+        planCollapsed = state.openQuests.mapNotNull { it.parentId }.toSet()
+    }
+
+    /**
+     * Shows a quest where it sits in the hierarchy: the Plan view, with every
+     * branch above it unfolded and the cursor on it.
+     */
+    public fun showInPlan(id: String, state: QuestsState) {
+        val quest = state.quests[id] ?: return
+        planCollapsed = planCollapsed - state.ancestors(quest.id).map { it.id }.toSet()
+        go(Route.Quests(QuestView.PLAN))
+        selectedId = id
     }
 
     /** All terms must match somewhere, which is what people expect of a search box. */
