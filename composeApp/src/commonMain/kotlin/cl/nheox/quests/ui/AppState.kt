@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cl.nheox.quests.domain.Clock
 import cl.nheox.quests.domain.Energy
+import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.SortOrder
@@ -15,6 +16,9 @@ import cl.nheox.quests.projection.QuestsState
 
 /** Which top-level screen is showing. */
 public sealed interface Route {
+    /** The launch view (§7.5): where things stand, at a glance. */
+    public data object Standing : Route
+
     public data class Quests(val view: QuestView) : Route
 
     public data object Skills : Route
@@ -30,6 +34,14 @@ public sealed interface Route {
     public data object Settings : Route
 
     public data object Help : Route
+}
+
+/** The screen a [LaunchView] setting opens the app on. */
+public fun launchRoute(view: LaunchView): Route = when (view) {
+    LaunchView.STANDING -> Route.Standing
+    LaunchView.TODAY -> Route.Quests(QuestView.TODAY)
+    LaunchView.ALL -> Route.Quests(QuestView.ALL)
+    LaunchView.PLAN -> Route.Quests(QuestView.PLAN)
 }
 
 /** A modal layer over whatever is showing. */
@@ -58,10 +70,11 @@ public class AppState(
     public val store: QuestStore,
     public val clock: Clock,
 ) {
-    public var route: Route by mutableStateOf(Route.Quests(QuestView.TODAY))
+    /** Starts where Settings says to: the store has been loaded by the time this exists. */
+    public var route: Route by mutableStateOf(launchRoute(store.state.value.settings.launchView))
         private set
 
-    public var sort: SortOrder by mutableStateOf(Views.defaultSort(QuestView.TODAY))
+    public var sort: SortOrder by mutableStateOf(Views.defaultSort((route as? Route.Quests)?.view ?: QuestView.TODAY))
 
     public var selectedId: String? by mutableStateOf(null)
 
@@ -108,6 +121,9 @@ public class AppState(
     public fun go(route: Route) {
         this.route = route
         (route as? Route.Quests)?.let { sort = Views.defaultSort(it.view) }
+        // Standing has no cursor. A selection carried in from a list would stay
+        // live but out of sight there, and Space would complete it unseen.
+        if (route == Route.Standing) selectedId = null
         clearMarks()
     }
 

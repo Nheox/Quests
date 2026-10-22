@@ -454,12 +454,8 @@ private fun ApplicationScope.AppWindows(
         )
     }
 
-    LaunchedEffect(Unit) {
-        scheduler.start()
-        scheduler.launchSummary(runtime.store.state.value.settings)?.let { alert ->
-            trayState.sendNotification(Notification(alert.title, alert.body, Notification.Type.Info))
-        }
-    }
+    // No launch notification: the Standing screen is the overdue summary now.
+    LaunchedEffect(Unit) { scheduler.start() }
 
     var choosingFolder by remember { mutableStateOf(false) }
 

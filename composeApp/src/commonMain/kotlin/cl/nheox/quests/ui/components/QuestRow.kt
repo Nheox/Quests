@@ -178,8 +178,12 @@ private fun PinMarker(pin: Pin) {
     }
 }
 
+/**
+ * The complete action, as the box it is ticked in. Shared with the Standing
+ * screen's picks, so finishing a quest is the same gesture everywhere.
+ */
 @Composable
-private fun CompleteBox(
+internal fun CompleteBox(
     state: QuestState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

@@ -3,6 +3,7 @@ package cl.nheox.quests.projection
 import cl.nheox.quests.domain.Clock
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.QuestState
 import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.Repetition
@@ -497,5 +498,17 @@ class StoreTest {
         val before = java.nio.file.Files.size(vault.logFile(device.id))
         store.changeQuest(id, FieldPatch())
         assertEquals(before, java.nio.file.Files.size(vault.logFile(device.id)))
+    }
+
+    @Test
+    fun `the launch view survives a restart, and one this version cannot open means Standing`() {
+        assertEquals(LaunchView.STANDING, state().settings.launchView, "Standing is the default")
+
+        store.changeSettings(FieldPatch().setEnum(SettingsFields.LAUNCH_VIEW, LaunchView.PLAN))
+        assertEquals(LaunchView.PLAN, newStore().state.value.settings.launchView)
+
+        // A newer release's choice, or a hand edit: not the older PLAN, but Standing.
+        store.changeSettings(FieldPatch().set(SettingsFields.LAUNCH_VIEW, "SHOP"))
+        assertEquals(LaunchView.STANDING, newStore().state.value.settings.launchView)
     }
 }

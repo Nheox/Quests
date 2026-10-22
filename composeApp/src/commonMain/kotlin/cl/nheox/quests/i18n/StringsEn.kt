@@ -3,13 +3,18 @@ package cl.nheox.quests.i18n
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.DueBucket
 import cl.nheox.quests.domain.EnergyBand
+import cl.nheox.quests.domain.Dates
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.PriorityBreakdown
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.SuggestionReason
 import cl.nheox.quests.domain.Urgency
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.Month
 
 /** British English, the language the app was written in. */
 public object StringsEn : Strings {
@@ -32,6 +37,7 @@ public object StringsEn : Strings {
     override val navStats: String = "Insight"
     override val navSettings: String = "Settings"
     override val navHelp: String = "Help"
+    override val navStanding: String = "Standing"
     override val sectionQuests: String = "Quests"
     override val sectionProgress: String = "Progress"
     override val sectionApp: String = "App"
@@ -149,6 +155,13 @@ public object StringsEn : Strings {
     override val suggesterMinutes: String = "Minutes available"
     override val suggesterNoCandidates: String = "Nothing fits right now. Try a longer window."
     override val suggesterRefresh: String = "Suggest again"
+    override val standingLastTwelveWeeks: String = "Last 12 weeks"
+    override val standingHeatmapCaption: String = "each square is one day — brighter means more XP"
+    override val standingXpThisWeek: String = "XP this week"
+    override val standingClosestSkill: String = "Closest to next level"
+    override val standingWhatNow: String = "What should I do now?"
+    override val standingNothingOpen: String = "No open quests. Press N to add one."
+    override val actionStart: String = "Start"
     override val messageNoQuests: String = "Nothing here."
     override val messageNothingDueToday: String = "Nothing due today. That is allowed."
     override val messageNoOverdue: String = "Nothing overdue."
@@ -177,11 +190,10 @@ public object StringsEn : Strings {
     override val settingsSounds: String = "Completion sound"
     override val settingsFailureCosts: String = "Failing a quest costs its reward points"
     override val settingsFailureCostsBody: String = "Off by default: failure is recorded, not punished."
-    override val settingsDailyDigest: String = "Daily digest notification"
-    override val settingsDigestTime: String = "Digest time"
-    override val settingsOverdueSummary: String = "Overdue summary on launch"
     override val settingsReminders: String = "Reminders"
     override val settingsTray: String = "Keep running in the tray"
+    override val settingsLaunchView: String = "Opens on"
+    override val settingsLaunchViewBody: String = "The screen Quests shows when it starts."
     override val settingsIcsExport: String = "Generate calendar feed"
     override val settingsIcsExportBody: String = "Writes export/quests.ics. Subscribe your phone or system calendar to that file and reminders arrive through a calendar you already trust."
     override val settingsMarkdownExport: String = "Generate Markdown snapshot"
@@ -250,8 +262,6 @@ public object StringsEn : Strings {
 
     override fun remindBefore(minutes: Int): String = "$minutes min before"
 
-    override fun digestBody(open: Int, overdue: Int): String = "$open open, $overdue overdue"
-
     override fun skippedLinesWarning(count: Int): String = "$count unreadable log lines were skipped"
 
     override fun compactedSummary(events: Int, fields: Int): String = "Dropped $events superseded events and $fields superseded fields"
@@ -259,6 +269,97 @@ public object StringsEn : Strings {
     override fun streakDays(days: Int): String = if (days == 1) "1 day" else "$days days"
 
     override fun percent(value: Float): String = "${(value * 100).toInt()}%"
+
+    override fun todayOfTotal(total: Int): String = "of $total done"
+
+    override fun questsWord(count: Int): String = if (count == 1) "quest" else "quests"
+
+    override fun weekVsLast(thisWeek: Int, lastWeek: Int): String = when {
+        lastWeek == 0 -> "nothing last week"
+        thisWeek > lastWeek -> "up from $lastWeek last week"
+        thisWeek < lastWeek -> "down from $lastWeek last week"
+        else -> "same as last week"
+    }
+
+    override fun xpUntilLevel(xp: Long, level: Int): String = "$xp XP until level $level"
+
+    override fun levelLower(level: Int): String = "level $level"
+
+    override fun overdueFor(days: Long): String = when (days) {
+        0L -> "today"
+        1L -> "1 day"
+        else -> "$days days"
+    }
+
+    override fun moreCount(count: Int): String = "+$count more"
+
+    override fun questMeta(minutes: Int?, xp: Int): String {
+        val time = when {
+            minutes == null -> null
+            minutes < 60 -> "$minutes min"
+            else -> Dates.formatMinutes(minutes)
+        }
+        return listOfNotNull(time, "$xp XP").joinToString(" · ")
+    }
+
+    // Each line says what the suggester actually did at that energy (see
+    // Suggester.score): it is a reason, not a mood.
+    override fun energyCaption(band: EnergyBand): String = when (band) {
+        EnergyBand.HIGH -> "Your energy is high, so these include the hard and frightening ones:"
+        EnergyBand.MEDIUM -> "Your energy is steady, so these are a balanced mix:"
+        EnergyBand.LOW -> "Your energy is low, so these are light and easy:"
+        EnergyBand.SPENT -> "You are running on empty, so these are the gentlest there are:"
+    }
+
+    override fun weekdayInitial(day: DayOfWeek): String = weekdayLong(day).take(1)
+
+    override fun heatmapDay(date: LocalDate, xp: Int, quests: Int): String {
+        val day = "${weekdayShort(date.dayOfWeek)} ${date.dayOfMonth} ${monthShort(date.month)}"
+        return when (quests) {
+            0 -> "$day · nothing finished"
+            1 -> "$day · $xp XP · 1 quest"
+            else -> "$day · $xp XP · $quests quests"
+        }
+    }
+
+    override fun heatmapDescription(xp: Int, activeDays: Int, todayXp: Int): String {
+        val days = if (activeDays == 1) "1 day" else "$activeDays days"
+        return "Activity over the last 12 weeks: $xp XP across $days. Today: $todayXp XP."
+    }
+
+    override fun longDate(date: LocalDate): String = "${weekdayLong(date.dayOfWeek)} ${date.dayOfMonth} ${monthLong(date.month)}"
+
+    override fun weekdayShort(day: DayOfWeek): String = weekdayLong(day).take(3)
+
+    override fun monthShort(month: Month): String = monthLong(month).take(3)
+
+    // Spelled out rather than taken from java.time's display names, which
+    // follow the JVM's default locale: on a machine set to another language
+    // they would put foreign day names into an English interface.
+    private fun weekdayLong(day: DayOfWeek): String = when (day) {
+        DayOfWeek.MONDAY -> "Monday"
+        DayOfWeek.TUESDAY -> "Tuesday"
+        DayOfWeek.WEDNESDAY -> "Wednesday"
+        DayOfWeek.THURSDAY -> "Thursday"
+        DayOfWeek.FRIDAY -> "Friday"
+        DayOfWeek.SATURDAY -> "Saturday"
+        DayOfWeek.SUNDAY -> "Sunday"
+    }
+
+    private fun monthLong(month: Month): String = when (month) {
+        Month.JANUARY -> "January"
+        Month.FEBRUARY -> "February"
+        Month.MARCH -> "March"
+        Month.APRIL -> "April"
+        Month.MAY -> "May"
+        Month.JUNE -> "June"
+        Month.JULY -> "July"
+        Month.AUGUST -> "August"
+        Month.SEPTEMBER -> "September"
+        Month.OCTOBER -> "October"
+        Month.NOVEMBER -> "November"
+        Month.DECEMBER -> "December"
+    }
 
     override fun firstRunUse(path: String): String = "Use $path"
 
@@ -369,6 +470,13 @@ public object StringsEn : Strings {
         EnergyBand.MEDIUM -> "Medium"
         EnergyBand.LOW -> "Low"
         EnergyBand.SPENT -> "Spent"
+    }
+
+    override fun launchView(value: LaunchView): String = when (value) {
+        LaunchView.STANDING -> navStanding
+        LaunchView.TODAY -> navToday
+        LaunchView.ALL -> navAll
+        LaunchView.PLAN -> navPlan
     }
 
     override fun suggestionReason(value: SuggestionReason): String = when (value) {

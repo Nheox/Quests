@@ -96,6 +96,28 @@ public object Views {
         }
     }
 
+    /**
+     * The list a quest is opened in when it is asked for from outside one —
+     * from the Standing screen, say.
+     *
+     * Today, Tomorrow, Next and No due date between them hold every open
+     * quest exactly once, so an open quest lands in the one that holds it,
+     * among the quests it is due alongside; a finished one lands in Completed
+     * or Failed.
+     */
+    public fun home(quest: Quest, clock: Clock): QuestView {
+        val due = quest.dueDate
+        val today = clock.today()
+        return when {
+            quest.isDone -> QuestView.COMPLETED
+            quest.isFailed -> QuestView.FAILED
+            due == null -> QuestView.NO_DUE_DATE
+            !due.isAfter(today) -> QuestView.TODAY
+            due == today.plusDays(1) -> QuestView.TOMORROW
+            else -> QuestView.NEXT
+        }
+    }
+
     /** Views that read as a tree rather than a flat list. */
     public fun isTree(view: QuestView): Boolean = view == QuestView.PLAN
 

@@ -4,7 +4,6 @@ import cl.nheox.quests.domain.Clock
 import cl.nheox.quests.domain.Dates
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.Reminder
-import cl.nheox.quests.domain.Settings
 import cl.nheox.quests.projection.QuestsState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -12,7 +11,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 public data class ReminderAlert(
@@ -21,7 +19,11 @@ public data class ReminderAlert(
 )
 
 /**
- * Fires reminders and the daily digest while the app is running.
+ * Fires per-quest reminders while the app is running.
+ *
+ * There is no daily digest and no launch summary any more: the Standing
+ * screen (§7.5) answers at launch what those two notifications used to
+ * announce, and a notification at a set hour is gone before it is read.
  *
  * In-process, per §8.1 — a coroutine that wakes up every minute and asks what
  * is due. No `cron`, no `systemd` timer, no launch agent, because none of those
@@ -45,7 +47,6 @@ public class ReminderScheduler(
 
     /** Keyed per quest and per reminder, so each fires exactly once per run. */
     private val fired = HashSet<String>()
-    private var lastDigest: LocalDate? = null
 
     public fun start() {
         if (job?.isActive == true) return
@@ -66,24 +67,11 @@ public class ReminderScheduler(
         job = null
     }
 
-    /** The overdue summary shown once at launch (§7.5). */
-    public fun launchSummary(settings: Settings): ReminderAlert? {
-        if (!settings.overdueSummaryOnLaunch) return null
-        val current = state()
-        val overdue = current.openQuests.count { Dates.isOverdue(it.dueDate, it.dueTime, clock) }
-        if (overdue == 0) return null
-        return ReminderAlert(
-            title = "Quests",
-            body = overdueBody(overdue),
-        )
-    }
-
     internal fun tick() {
         val current = state()
-        val settings = current.settings
         val now = clock.now()
 
-        if (settings.remindersEnabled) {
+        if (current.settings.remindersEnabled) {
             for (quest in current.openQuests) {
                 for ((index, reminder) in quest.reminders.withIndex()) {
                     val due = dueAt(quest, reminder) ?: continue
@@ -100,19 +88,6 @@ public class ReminderScheduler(
                 }
             }
         }
-
-        if (settings.dailyDigestEnabled) {
-            val today = clock.today()
-            val digestMoment = today.atTime(settings.dailyDigestTime).atZone(clock.zone()).toInstant()
-            if (lastDigest != today && !digestMoment.isAfter(now)) {
-                lastDigest = today
-                val open = current.openQuests.size
-                val overdue = current.openQuests.count { Dates.isOverdue(it.dueDate, it.dueTime, clock) }
-                if (open > 0) {
-                    onAlert(ReminderAlert("Quests", "$open open, $overdue overdue"))
-                }
-            }
-        }
     }
 
     private fun suppressPast() {
@@ -123,7 +98,6 @@ public class ReminderScheduler(
                 if (!due.isAfter(now)) fired += "${quest.id}#$index@${due.epochSecond}"
             }
         }
-        lastDigest = clock.today()
     }
 
     private fun dueAt(quest: Quest, reminder: Reminder): Instant? = when (reminder) {
@@ -145,9 +119,6 @@ public class ReminderScheduler(
         append(quest.difficulty.name.lowercase().replace('_', ' '))
         quest.estimatedMinutes?.let { append(" · ").append(Dates.formatMinutes(it)) }
     }
-
-    private fun overdueBody(count: Int): String =
-        if (count == 1) "1 quest is overdue" else "$count quests are overdue"
 
     public companion object {
         private const val TICK_MILLIS = 60_000L

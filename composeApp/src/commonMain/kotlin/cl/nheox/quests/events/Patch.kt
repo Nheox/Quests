@@ -139,8 +139,13 @@ public object SettingsFields {
     public const val LANGUAGE: String = "language"
     public const val SOUNDS_ENABLED: String = "soundsEnabled"
     public const val FAILURE_COSTS_POINTS: String = "failureCostsPoints"
+    /** Legacy, from the removed digest: see [cl.nheox.quests.domain.Settings.dailyDigestEnabled]. */
     public const val DAILY_DIGEST_ENABLED: String = "dailyDigestEnabled"
+
+    /** Legacy, from the removed digest: see [cl.nheox.quests.domain.Settings.dailyDigestTime]. */
     public const val DAILY_DIGEST_TIME: String = "dailyDigestTime"
+
+    /** Legacy, from the removed launch notification: see [cl.nheox.quests.domain.Settings.overdueSummaryOnLaunch]. */
     public const val OVERDUE_SUMMARY_ON_LAUNCH: String = "overdueSummaryOnLaunch"
     public const val ICS_EXPORT_ENABLED: String = "icsExportEnabled"
     public const val MARKDOWN_EXPORT_ENABLED: String = "markdownExportEnabled"
@@ -149,4 +154,5 @@ public object SettingsFields {
     /** Legacy, from the removed first-run tour: see [cl.nheox.quests.domain.Settings.onboardingComplete]. */
     public const val ONBOARDING_COMPLETE: String = "onboardingComplete"
     public const val START_IN_TRAY: String = "startInTray"
+    public const val LAUNCH_VIEW: String = "launchView"
 }

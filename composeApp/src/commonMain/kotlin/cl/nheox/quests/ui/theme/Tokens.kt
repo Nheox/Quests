@@ -1,5 +1,8 @@
 package cl.nheox.quests.ui.theme
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.TweenSpec
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -135,4 +138,24 @@ public object Radii {
     public val md: Dp = 8.dp
     public val lg: Dp = 12.dp
     public val pill: Dp = 999.dp
+}
+
+/**
+ * Motion (§7.6): three durations and one curve, for every state change.
+ *
+ * Small things — hover, focus, a checkbox — take [SHORT]; medium ones — a
+ * view switching, a bar filling — take [MEDIUM]; a whole screen arriving takes
+ * [LONG]. One easing curve everywhere, so nothing in the app moves with a
+ * different accent from the rest: a quick start that settles gently, which
+ * reads as responsive without ever looking like it overshot.
+ */
+public object Motion {
+    public const val SHORT: Int = 150
+    public const val MEDIUM: Int = 220
+    public const val LONG: Int = 320
+
+    public val easing: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+
+    public fun <T> tween(durationMillis: Int): TweenSpec<T> =
+        androidx.compose.animation.core.tween(durationMillis, easing = easing)
 }

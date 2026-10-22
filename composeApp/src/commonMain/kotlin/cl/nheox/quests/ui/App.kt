@@ -1,5 +1,6 @@
 package cl.nheox.quests.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,9 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
@@ -29,6 +32,8 @@ import cl.nheox.quests.ui.screens.RewardsScreen
 import cl.nheox.quests.ui.screens.ScratchpadScreen
 import cl.nheox.quests.ui.screens.SettingsScreen
 import cl.nheox.quests.ui.screens.SkillsScreen
+import cl.nheox.quests.ui.screens.StandingScreen
+import cl.nheox.quests.ui.theme.Motion
 import cl.nheox.quests.ui.theme.QuestsTheme
 import cl.nheox.quests.ui.theme.theme
 
@@ -70,33 +75,36 @@ public fun QuestsApp(
                 VLine()
 
                 Box(Modifier.weight(1f)) {
-                    when (val route = app.route) {
-                        is Route.Quests -> if (route.view == QuestView.PLAN) {
-                            PlanScreen(app, state)
-                        } else {
-                            QuestListScreen(
+                    ViewTransition(app.route) { route ->
+                        when (route) {
+                            Route.Standing -> StandingScreen(app, state, onQuickAdd = actions.quickAdd)
+                            is Route.Quests -> if (route.view == QuestView.PLAN) {
+                                PlanScreen(app, state)
+                            } else {
+                                QuestListScreen(
+                                    app = app,
+                                    state = state,
+                                    quests = app.visibleQuests(state),
+                                    onQuickAdd = actions.quickAdd,
+                                )
+                            }
+
+                            Route.Skills -> SkillsScreen(app, state)
+                            Route.Rewards -> RewardsScreen(app, state)
+                            Route.Inventory -> InventoryScreen(app, state)
+                            Route.Scratchpad -> ScratchpadScreen(app, state)
+                            Route.Insight -> InsightScreen(app, state)
+                            Route.Help -> HelpScreen()
+                            Route.Settings -> SettingsScreen(
                                 app = app,
                                 state = state,
-                                quests = app.visibleQuests(state),
-                                onQuickAdd = actions.quickAdd,
+                                onExportNow = actions.exportNow,
+                                onInstallHotkey = actions.installHotkey,
+                                onOpenFolder = actions.openFolder,
+                                onChooseFolder = actions.chooseFolder,
+                                onCompact = actions.compact,
                             )
                         }
-
-                        Route.Skills -> SkillsScreen(app, state)
-                        Route.Rewards -> RewardsScreen(app, state)
-                        Route.Inventory -> InventoryScreen(app, state)
-                        Route.Scratchpad -> ScratchpadScreen(app, state)
-                        Route.Insight -> InsightScreen(app, state)
-                        Route.Help -> HelpScreen()
-                        Route.Settings -> SettingsScreen(
-                            app = app,
-                            state = state,
-                            onExportNow = actions.exportNow,
-                            onInstallHotkey = actions.installHotkey,
-                            onOpenFolder = actions.openFolder,
-                            onChooseFolder = actions.chooseFolder,
-                            onCompact = actions.compact,
-                        )
                     }
                 }
 
@@ -144,6 +152,27 @@ public fun QuestsApp(
                 app.typing = false
                 keyboardFocus.requestFocus()
             }
+        }
+    }
+}
+
+/**
+ * Switching views fades the new one in (§7.6: 220 ms, the one easing curve)
+ * rather than swapping it in on a single frame.
+ *
+ * The outgoing view is not kept on screen to cross-fade against, because
+ * screens read the live app state: during the fade it would already be showing
+ * the new view's content under the old view's frame. Keying on the route also
+ * gives every view a fresh start, scrolled to the top, instead of inheriting
+ * the scroll position of whichever list was open before.
+ */
+@Composable
+private fun ViewTransition(route: Route, content: @Composable (Route) -> Unit) {
+    key(route) {
+        val alpha = remember { Animatable(0f) }
+        LaunchedEffect(Unit) { alpha.animateTo(1f, Motion.tween(Motion.MEDIUM)) }
+        Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha.value }) {
+            content(route)
         }
     }
 }

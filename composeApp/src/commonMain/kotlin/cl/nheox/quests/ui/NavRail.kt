@@ -112,6 +112,11 @@ public fun NavRail(
             }
         }
 
+        // The launch view leads, above the lists: it is where the app opens,
+        // and the place to come back to for the whole picture.
+        Spacer(Modifier.height(Space.sm))
+        RailItem(text.navStanding, Glyph.SHIELD, app.route == Route.Standing, null) { app.go(Route.Standing) }
+
         SectionHeader(text.sectionQuests)
         PRIMARY_VIEWS.forEach { view ->
             val count = Views.filter(view, state.quests.values, app.clock).size

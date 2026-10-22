@@ -4,12 +4,16 @@ import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.DueBucket
 import cl.nheox.quests.domain.EnergyBand
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.PriorityBreakdown
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.SuggestionReason
 import cl.nheox.quests.domain.Urgency
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.Month
 
 /**
  * Every piece of user-facing text in the app.
@@ -43,6 +47,7 @@ public interface Strings {
     public val navStats: String
     public val navSettings: String
     public val navHelp: String
+    public val navStanding: String
     public val sectionQuests: String
     public val sectionProgress: String
     public val sectionApp: String
@@ -160,6 +165,13 @@ public interface Strings {
     public val suggesterMinutes: String
     public val suggesterNoCandidates: String
     public val suggesterRefresh: String
+    public val standingLastTwelveWeeks: String
+    public val standingHeatmapCaption: String
+    public val standingXpThisWeek: String
+    public val standingClosestSkill: String
+    public val standingWhatNow: String
+    public val standingNothingOpen: String
+    public val actionStart: String
     public val messageNoQuests: String
     public val messageNothingDueToday: String
     public val messageNoOverdue: String
@@ -188,11 +200,10 @@ public interface Strings {
     public val settingsSounds: String
     public val settingsFailureCosts: String
     public val settingsFailureCostsBody: String
-    public val settingsDailyDigest: String
-    public val settingsDigestTime: String
-    public val settingsOverdueSummary: String
     public val settingsReminders: String
     public val settingsTray: String
+    public val settingsLaunchView: String
+    public val settingsLaunchViewBody: String
     public val settingsIcsExport: String
     public val settingsIcsExportBody: String
     public val settingsMarkdownExport: String
@@ -250,11 +261,52 @@ public interface Strings {
     public fun completedOn(date: String): String
     public fun repeatsEvery(every: Int, unit: String): String
     public fun remindBefore(minutes: Int): String
-    public fun digestBody(open: Int, overdue: Int): String
     public fun skippedLinesWarning(count: Int): String
     public fun compactedSummary(events: Int, fields: Int): String
     public fun streakDays(days: Int): String
     public fun percent(value: Float): String
+
+    /** "of 7 done", after the big count of quests finished today. */
+    public fun todayOfTotal(total: Int): String
+
+    /** "quest" or "quests", after the big overdue count. */
+    public fun questsWord(count: Int): String
+
+    /** "up from 148 last week", "down from 210 last week", "same as last week", "nothing last week". */
+    public fun weekVsLast(thisWeek: Int, lastWeek: Int): String
+
+    /** "60 XP until level 9". */
+    public fun xpUntilLevel(xp: Long, level: Int): String
+
+    /** "level 14", beside a skill's bar. */
+    public fun levelLower(level: Int): String
+
+    /** "11 days", "1 day", "today": how long an overdue quest has waited. */
+    public fun overdueFor(days: Long): String
+
+    /** "+3 more". */
+    public fun moreCount(count: Int): String
+
+    /** "10 min · 6 XP", or "6 XP" when the quest has no estimate. */
+    public fun questMeta(minutes: Int?, xp: Int): String
+
+    /** The line over the What now? picks: why these, at this energy. */
+    public fun energyCaption(band: EnergyBand): String
+
+    /** The single letter under a day of the week's bar chart. */
+    public fun weekdayInitial(day: DayOfWeek): String
+
+    /** A heatmap cell's tooltip: "Tue 14 Oct · 45 XP · 3 quests". */
+    public fun heatmapDay(date: LocalDate, xp: Int, quests: Int): String
+
+    /** What a screen reader hears for the whole heatmap. */
+    public fun heatmapDescription(xp: Int, activeDays: Int, todayXp: Int): String
+
+    /** "Thursday 22 October", the date beside the Standing title. */
+    public fun longDate(date: LocalDate): String
+
+    public fun weekdayShort(day: DayOfWeek): String
+    public fun monthShort(month: Month): String
 
     /** "Use ~/Quests", the first-run button when the offered folder exists. */
     public fun firstRunUse(path: String): String
@@ -283,6 +335,7 @@ public interface Strings {
     public fun bucket(value: DueBucket): String
     public fun sortKey(value: SortKey): String
     public fun energyBand(value: EnergyBand): String
+    public fun launchView(value: LaunchView): String
     public fun suggestionReason(value: SuggestionReason): String
 }
 

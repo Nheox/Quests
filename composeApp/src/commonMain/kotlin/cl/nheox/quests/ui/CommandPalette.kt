@@ -72,6 +72,7 @@ public fun commands(
     val today = app.clock.today()
     val out = mutableListOf<Command>()
 
+    out += Command(text.navStanding, Glyph.SHIELD, "Ctrl+0", text.sectionQuests) { app.go(Route.Standing) }
     QuestView.entries.forEach { view ->
         out += Command(text.view(view), Glyph.LIST, group = text.sectionQuests) { app.goToView(view) }
     }

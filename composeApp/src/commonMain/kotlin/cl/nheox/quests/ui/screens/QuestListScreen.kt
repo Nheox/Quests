@@ -256,10 +256,11 @@ private fun SortControl(app: AppState) {
  * One text field that parses difficulty, fear, urgency, duration, due date,
  * repetition and skills out of what was typed (§7.4). The live preview below is
  * the part that makes the syntax learnable: nobody reads a syntax reference,
- * but everybody notices a chip appearing as they type.
+ * but everybody notices a chip appearing as they type. Shared with the
+ * Standing screen, so `N` adds a quest the same way wherever it is pressed.
  */
 @Composable
-private fun QuickAddBar(app: AppState, onSubmit: (String) -> Unit) {
+internal fun QuickAddBar(app: AppState, onSubmit: (String) -> Unit) {
     val text = strings
     val focus = remember { FocusRequester() }
 

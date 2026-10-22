@@ -107,6 +107,11 @@ public object Shortcuts {
             true
         }
 
+        Key.Zero -> {
+            app.go(Route.Standing)
+            true
+        }
+
         Key.One -> jump(app, QuestView.TODAY)
         Key.Two -> jump(app, QuestView.TOMORROW)
         Key.Three -> jump(app, QuestView.OVERDUE)
@@ -295,6 +300,7 @@ public object Shortcuts {
         "Ctrl+E" to "Write the calendar and Markdown exports now",
         "Ctrl+A" to "Select every quest in the list",
         "Ctrl+," to "Settings",
+        "Ctrl+0" to "Standing, where things stand at a glance",
         "Ctrl+1…9" to "Jump to a view",
         "↑ ↓" to "Move the cursor (j and k also work)",
         "Space" to "Complete the selected quest (c also works)",

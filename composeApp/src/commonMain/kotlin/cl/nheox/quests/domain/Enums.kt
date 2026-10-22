@@ -111,3 +111,18 @@ public enum class Language {
     EN,
     ES,
 }
+
+/**
+ * The screen the app opens on (§7.5).
+ *
+ * Stored by name in a settings event. A name this version does not know — a
+ * newer release's choice, or a hand edit — opens [STANDING], the default,
+ * rather than failing or quietly keeping an older choice.
+ */
+@Serializable
+public enum class LaunchView {
+    STANDING,
+    TODAY,
+    ALL,
+    PLAN,
+}

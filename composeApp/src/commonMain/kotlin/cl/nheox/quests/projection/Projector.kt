@@ -6,6 +6,7 @@ import cl.nheox.quests.domain.Fear
 import cl.nheox.quests.domain.InventoryItem
 import cl.nheox.quests.domain.Iso
 import cl.nheox.quests.domain.Language
+import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.QuestState
 import cl.nheox.quests.domain.Reminder
@@ -483,6 +484,14 @@ public object Projector {
 
                     SettingsFields.START_IN_TRAY -> value.asBoolean()?.let { settings.copy(startInTray = it) }
                         ?: settings
+
+                    // Unlike the switches above, an unreadable value is not
+                    // skipped: a view this version cannot open — a newer
+                    // release's choice, or a hand edit — means Standing, not
+                    // whichever older choice the log happened to hold before it.
+                    SettingsFields.LAUNCH_VIEW -> settings.copy(
+                        launchView = value.asEnum(LaunchView.entries) ?: LaunchView.STANDING,
+                    )
 
                     else -> settings
                 }

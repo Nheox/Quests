@@ -141,8 +141,20 @@ public data class Settings(
     val soundsEnabled: Boolean = true,
     /** §10 Q2: failure is recorded, and by default costs nothing. */
     val failureCostsPoints: Boolean = false,
+    /**
+     * The daily digest notification, which the Standing screen replaced
+     * (§7.5): the app now opens on the answer instead of announcing it at a
+     * set hour. Nothing reads this; it stays because older logs carry
+     * `dailyDigestEnabled` settings events, and a field a log may hold is never
+     * removed.
+     */
     val dailyDigestEnabled: Boolean = true,
+    /** When the digest fired. Kept for log compatibility, like [dailyDigestEnabled]. */
     val dailyDigestTime: IsoTime = LocalTime.of(8, 30),
+    /**
+     * The overdue-count notification at launch, also replaced by the Standing
+     * screen's Overdue card. Kept for log compatibility, like [dailyDigestEnabled].
+     */
     val overdueSummaryOnLaunch: Boolean = true,
     val icsExportEnabled: Boolean = true,
     val markdownExportEnabled: Boolean = true,
@@ -156,4 +168,6 @@ public data class Settings(
      */
     val onboardingComplete: Boolean = false,
     val startInTray: Boolean = false,
+    /** The screen the app opens on; Standing unless the user chose another. */
+    val launchView: LaunchView = LaunchView.STANDING,
 )

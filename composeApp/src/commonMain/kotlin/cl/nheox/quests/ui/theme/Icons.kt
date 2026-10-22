@@ -66,6 +66,7 @@ public enum class Glyph {
     UNDO,
     WEIGHT,
     PIN,
+    SHIELD,
 }
 
 @Composable
@@ -401,6 +402,13 @@ public fun DrawScope.drawGlyph(glyph: Glyph, tint: Color) {
             line(8.5f, 3.5f, 15.5f, 3.5f)
             polyline(10f, 3.5f, 10f, 9f, 7f, 13.5f, 17f, 13.5f, 14f, 9f, 14f, 3.5f)
             line(12f, 13.5f, 12f, 20.5f)
+        }
+
+        // Standing: a shield bearing a rank chevron — where you stand, in the
+        // vocabulary of the game the app is.
+        Glyph.SHIELD -> {
+            closedPath(12f, 3f, 19.5f, 6f, 19.5f, 12f, 12f, 21f, 4.5f, 12f, 4.5f, 6f)
+            polyline(8.5f, 10.5f, 12f, 13.5f, 15.5f, 10.5f)
         }
     }
 }

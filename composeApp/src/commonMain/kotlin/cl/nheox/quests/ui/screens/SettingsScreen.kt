@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import cl.nheox.quests.BuildInfo
 import cl.nheox.quests.domain.EnergyMode
+import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.events.FieldPatch
 import cl.nheox.quests.events.ProfileFields
 import cl.nheox.quests.events.SettingsFields
@@ -221,29 +222,27 @@ public fun SettingsScreen(
                 modifier = Modifier.padding(top = Space.xs),
             )
 
+            // Where the app opens replaced the digest and the launch summary
+            // (§7.5): the Standing screen answers at launch what those two
+            // notifications used to announce.
+            SectionHeader(text.settingsLaunchView)
+            SegmentedSelector(
+                options = LaunchView.entries,
+                selected = settings.launchView,
+                onSelect = { app.store.changeSettings(FieldPatch().setEnum(SettingsFields.LAUNCH_VIEW, it)) },
+                label = { text.launchView(it) },
+                compact = true,
+            )
+            Text(
+                text.settingsLaunchViewBody,
+                style = MaterialTheme.typography.bodySmall,
+                color = theme.textFaint,
+                modifier = Modifier.padding(top = Space.xs),
+            )
+
             SectionHeader(text.settingsReminders)
             ToggleRow(text.settingsReminders, settings.remindersEnabled, {
                 app.store.changeSettings(FieldPatch().set(SettingsFields.REMINDERS_ENABLED, it))
-            })
-            ToggleRow(text.settingsDailyDigest, settings.dailyDigestEnabled, {
-                app.store.changeSettings(FieldPatch().set(SettingsFields.DAILY_DIGEST_ENABLED, it))
-            })
-            if (settings.dailyDigestEnabled) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                    Text(text.settingsDigestTime, style = MaterialTheme.typography.bodySmall, color = theme.textFaint)
-                    TimeField(
-                        value = settings.dailyDigestTime,
-                        onValueChange = { time ->
-                            if (time != null) {
-                                app.store.changeSettings(FieldPatch().setTime(SettingsFields.DAILY_DIGEST_TIME, time))
-                            }
-                        },
-                        onFocusChange = { app.typing = it },
-                    )
-                }
-            }
-            ToggleRow(text.settingsOverdueSummary, settings.overdueSummaryOnLaunch, {
-                app.store.changeSettings(FieldPatch().set(SettingsFields.OVERDUE_SUMMARY_ON_LAUNCH, it))
             })
             ToggleRow(text.settingsTray, settings.trayEnabled, {
                 app.store.changeSettings(FieldPatch().set(SettingsFields.TRAY_ENABLED, it))
