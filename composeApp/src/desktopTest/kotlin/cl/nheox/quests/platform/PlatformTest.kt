@@ -197,3 +197,24 @@ class AppPathsTest {
         ).forEach { case -> assertEquals(case.expected, AppPaths.displayPath(Path.of(case.path), home), case.path) }
     }
 }
+
+class MacIntegrationTest {
+
+    @Test
+    fun `the process is named Quests and follows the system appearance`() {
+        // Without these, a Mac shows the main class name in the menu bar and
+        // light title bars in dark mode. They are plain properties, so they
+        // are checked on every platform.
+        MacIntegration.configureProcess()
+        assertEquals("Quests", System.getProperty("apple.awt.application.name"))
+        assertEquals("system", System.getProperty("apple.awt.application.appearance"))
+    }
+
+    @Test
+    fun `finishing with no quit pending does nothing`() {
+        // Called after every exit, including the tray's Close, where macOS
+        // asked nothing; answering a question nobody asked must not end the
+        // process here.
+        MacIntegration.finishQuit()
+    }
+}

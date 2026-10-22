@@ -40,6 +40,7 @@ import cl.nheox.quests.platform.DataFolder
 import cl.nheox.quests.platform.DesktopServices
 import cl.nheox.quests.platform.GnomeKeybinding
 import cl.nheox.quests.platform.LaunchPlan
+import cl.nheox.quests.platform.MacIntegration
 import cl.nheox.quests.platform.Move
 import cl.nheox.quests.platform.ReminderScheduler
 import cl.nheox.quests.platform.SingleInstance
@@ -49,6 +50,7 @@ import cl.nheox.quests.projection.QuestsState
 import cl.nheox.quests.ui.AppActions
 import cl.nheox.quests.ui.AppState
 import cl.nheox.quests.ui.QuestsApp
+import cl.nheox.quests.ui.Route
 import cl.nheox.quests.ui.theme.QuestsTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +60,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.system.exitProcess
 
 /**
  * Command-line surface.
@@ -131,7 +134,8 @@ private class Runtime(
 
 /**
  * The state that sits above any one window: which windows are wanted, and the
- * requests that reach the app from outside it, such as a second launch.
+ * requests that reach the app from outside it — a second launch, the Dock, the
+ * application menu.
  *
  * Those arrive on other threads and outside composition, so they land here as
  * snapshot state for the windows to act on, instead of each caller needing a
@@ -147,6 +151,11 @@ private class Shell(startInCapture: Boolean) {
     /** Counts `quests --capture` requests, which during first run raise its window instead. */
     var captures: Int by mutableStateOf(0)
 
+    /** A screen the application menu asked for, consumed once the main window has it. */
+    var route: Route? by mutableStateOf(null)
+
+    var quitRequested: Boolean by mutableStateOf(false)
+
     fun showMain() {
         mainVisible = true
         raises++
@@ -156,9 +165,17 @@ private class Shell(startInCapture: Boolean) {
         captureVisible = true
         captures++
     }
+
+    fun show(route: Route) {
+        this.route = route
+        showMain()
+    }
 }
 
 public fun main(args: Array<String>) {
+    // AWT reads these once, as it starts; nothing above this line may touch it.
+    MacIntegration.configureProcess()
+
     if (Cli.VERSION in args) {
         println(BuildInfo.VERSION)
         return
@@ -257,7 +274,16 @@ private fun launchUi(
         }
     }
 
-    application {
+    val dockReopens = MacIntegration.install(
+        MacIntegration.Handlers(
+            reopen = { shell.showMain() },
+            about = { shell.show(Route.Help) },
+            settings = { shell.show(Route.Settings) },
+            quit = { shell.quitRequested = true },
+        ),
+    )
+
+    application(exitProcessOnExit = false) {
         var runtime by remember { mutableStateOf(initial) }
 
         // Read straight off the classpath with ImageIO rather than through the
@@ -267,6 +293,10 @@ private fun launchUi(
         val iconBitmap = remember { loadIcon() }
         val icon = remember { BitmapPainter(iconBitmap) }
         val dark = isSystemInDarkTheme() || true
+
+        LaunchedEffect(shell.quitRequested) {
+            if (shell.quitRequested) exitApplication()
+        }
 
         val current = runtime
         if (current == null) {
@@ -278,6 +308,8 @@ private fun launchUi(
                 dark = dark,
                 ask = checkNotNull(ask),
                 onOpened = { opened ->
+                    // Asked for while there was nothing to show it in.
+                    shell.route = null
                     shell.mainVisible = true
                     runtime = opened
                 },
@@ -289,6 +321,7 @@ private fun launchUi(
                 icon = icon,
                 dark = dark,
                 startInCapture = startInCapture,
+                dockReopens = dockReopens,
                 onLaunch = { app, text ->
                     if (!listening) app.notify(text.messageCaptureUnavailable)
                     notice?.let { app.notify(it(text)) }
@@ -296,6 +329,12 @@ private fun launchUi(
             )
         }
     }
+
+    // macOS asked to quit and is waiting for the answer; give it now that the
+    // windows are gone. Then leave, as `application` would have by default:
+    // AWT's threads would otherwise keep the process alive.
+    MacIntegration.finishQuit()
+    exitProcess(0)
 }
 
 /** The first-run window: one question, then the app in the same process. */
@@ -376,6 +415,7 @@ private fun ApplicationScope.AppWindows(
     icon: BitmapPainter,
     dark: Boolean,
     startInCapture: Boolean,
+    dockReopens: Boolean,
     onLaunch: (AppState, Strings) -> Unit,
 ) {
     val state by runtime.store.state.collectAsState()
@@ -392,6 +432,13 @@ private fun ApplicationScope.AppWindows(
         }
         runtime.exporter.exportAll(runtime.store.state.value)
         onLaunch(app, strings)
+    }
+
+    LaunchedEffect(shell.route) {
+        shell.route?.let { route ->
+            app.go(route)
+            shell.route = null
+        }
     }
 
     val scheduler = remember {
@@ -475,20 +522,19 @@ private fun ApplicationScope.AppWindows(
 
     // A headless session, a stripped desktop or a sandbox without a status
     // area has no tray. Hiding the window there would leave the app running
-    // with no way to get it back, so the tray has to be real before the
-    // close button is allowed to mean "hide".
+    // with no way to get it back, so something has to be able to restore it —
+    // the tray, or on macOS the Dock — before the close button may mean "hide".
     val trayAvailable = isTraySupported && state.settings.trayEnabled
     val mainWindowState = rememberWindowState(size = DpSize(1280.dp, 820.dp))
 
     Window(
         onCloseRequest = {
-            // Closing hides rather than quits when there is a tray to
-            // restore it from, so reminders keep firing with the window out
-            // of the way (§7.4).
-            if (trayAvailable) shell.mainVisible = false else exitApplication()
+            // Closing hides rather than quits, so reminders keep firing with
+            // the window out of the way (§7.4).
+            if (trayAvailable || dockReopens) shell.mainVisible = false else exitApplication()
         },
         // Hidden, not removed: the window keeps its size, place and scroll
-        // position for when the tray brings it back.
+        // position for when the Dock or the tray brings it back.
         visible = shell.mainVisible,
         title = strings.appName,
         icon = icon,
