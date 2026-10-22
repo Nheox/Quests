@@ -308,6 +308,10 @@ val finalizeDebPackage by tasks.registering(FinalizeDebPackage::class) {
         project.fileTree("src/desktopMain/resources/icons") {
             include("quests-*.png")
             include("quests.png")
+            // The tray marks share the prefix but are not app icons: addIcons
+            // would read no size from their names and install one over the
+            // 512x512 icon.
+            exclude("quests-tray-*.png")
         },
     )
     commandName.set("quests")

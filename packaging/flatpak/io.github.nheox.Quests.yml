@@ -51,6 +51,8 @@ modules:
           /app/share/icons/hicolor/256x256/apps/io.github.nheox.Quests.png
       - install -Dm644 quests.png
           /app/share/icons/hicolor/512x512/apps/io.github.nheox.Quests.png
+      - install -Dm644 quests.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.nheox.Quests.svg
     sources:
       - type: dir
         path: ../../composeApp/build/compose/binaries/main/app
@@ -62,3 +64,5 @@ modules:
         path: ../../composeApp/src/desktopMain/resources/icons/quests-256.png
       - type: file
         path: ../../composeApp/src/desktopMain/resources/icons/quests.png
+      - type: file
+        path: ../icon/quests.svg

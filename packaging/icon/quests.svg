@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Quests app icon: the master artwork, used at 48 px and above.
+
+  A gold progress ring forms the bowl of a Q and a teal tail crosses in front of
+  it at the lower right. It is the same ring the app draws around a skill level.
+
+  Rules:
+  - This file is the master. Every PNG, the .ico and the .icns are rendered from
+    it by generate_icon.py, which only rasterises: the geometry is never
+    re-derived in code, and the rendered files are never edited by hand.
+  - quests-small.svg is the same mark optically sized for 32 px and below.
+    A change here is a change there too.
+  - Both ring ends stop exactly on the tail's axis, under the tail, so the tail
+    appears to cut them off. The tail has no border or casing stroke.
+
+  Geometry, on a 1024 grid centred at (512, 512). Angles are measured clockwise
+  from 3 o'clock, which is how SVG's y-down coordinates turn.
+  - Ring: radius 296, stroke 78, round caps.
+  - Track: dim slate, clockwise from 250 deg to 45 deg. It starts under the
+    gold arc's rounded end, so the ring reads as one piece.
+  - Progress: gold, counter-clockwise from 272 deg (just past 12 o'clock)
+    round the left side to 45 deg: 227 deg of the circle.
+  - Tail: teal, radial at 45 deg from r = 196 to r = 404, stroke 84.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1F242D"/>
+      <stop offset="1" stop-color="#11151A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square with a soft top-to-bottom gradient. -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- Keyline: a 7% white hairline just inside the edge, so the square holds
+       its shape on a black background. -->
+  <rect x="3" y="3" width="1018" height="1018" rx="225"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="6"/>
+
+  <g fill="none" stroke-linecap="round">
+    <!-- Track: 250 deg clockwise to 45 deg. -->
+    <path d="M 410.8 233.9 A 296 296 0 0 1 721.3 721.3"
+          stroke="#2C333D" stroke-width="78"/>
+    <!-- Progress: 272 deg counter-clockwise to 45 deg. -->
+    <path d="M 522.3 216.2 A 296 296 0 1 0 721.3 721.3"
+          stroke="#E3AA4B" stroke-width="78"/>
+    <!-- Tail: drawn last, on top of both ring ends. -->
+    <path d="M 650.6 650.6 L 797.7 797.7"
+          stroke="#3DBDB2" stroke-width="84"/>
+  </g>
+</svg>

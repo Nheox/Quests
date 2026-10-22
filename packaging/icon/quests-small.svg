@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Quests app icon: optical version for 32 px and below.
+
+  The same mark as quests.svg with a different amount of room. At 16 px the
+  two-tone ring merges into a smudge, so this version drops the dim track,
+  tightens the ring and thickens both strokes.
+
+  Rules:
+  - quests.svg is the master. Change this file only to keep it in step with the
+    master, or for a reason that only shows at small sizes.
+  - generate_icon.py rasterises this file for every frame of 32 px or less, and
+    for nothing larger. It never re-derives the geometry in code.
+  - As in the master, the ring's end stops exactly on the tail's axis, under the
+    tail, and the tail has no border or casing stroke.
+
+  Geometry, on a 1024 grid centred at (512, 512). Angles are measured clockwise
+  from 3 o'clock, which is how SVG's y-down coordinates turn.
+  - Progress: gold, radius 280, stroke 124, round caps; counter-clockwise from
+    272 deg (just past 12 o'clock) round the left side to 45 deg.
+  - Tail: teal, radial at 45 deg from r = 196 to r = 420, stroke 128.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1F242D"/>
+      <stop offset="1" stop-color="#11151A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square and keyline, identical to the master. -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect x="3" y="3" width="1018" height="1018" rx="225"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="6"/>
+
+  <g fill="none" stroke-linecap="round">
+    <!-- Progress: 272 deg counter-clockwise to 45 deg. No track at this size. -->
+    <path d="M 521.8 232.2 A 280 280 0 1 0 710.0 710.0"
+          stroke="#E3AA4B" stroke-width="124"/>
+    <!-- Tail: drawn last, on top of the ring's end. -->
+    <path d="M 650.6 650.6 L 809.0 809.0"
+          stroke="#3DBDB2" stroke-width="128"/>
+  </g>
+</svg>
