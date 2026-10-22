@@ -7,16 +7,13 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
-import java.util.Locale
 
 /**
  * `java.time` throughout — never Joda, and never a bare epoch integer in a
@@ -112,9 +109,6 @@ public object Dates {
         val now = clock.localNow()
         return if (time == null) date.isBefore(now.toLocalDate()) else date.atTime(time).isBefore(now)
     }
-
-    public fun dayOfWeekName(day: DayOfWeek, locale: Locale): String =
-        day.getDisplayName(TextStyle.FULL_STANDALONE, locale)
 
     /** Monday-based week start, which is what both Chile and ISO use. */
     public fun startOfWeek(date: LocalDate): LocalDate =

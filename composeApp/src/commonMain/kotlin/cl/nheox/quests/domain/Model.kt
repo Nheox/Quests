@@ -162,8 +162,9 @@ public data class Settings(
     val trayEnabled: Boolean = true,
     /**
      * Set by the first-run tour, which is gone: first run now asks one
-     * question, where the data lives (§1.2), and nothing reads this. It stays
-     * because older logs carry `onboardingComplete` settings events, and the
+     * question, where the data lives (§1.2). The projector still reads the
+     * old events into it, but nothing acts on the value. It stays because
+     * older logs carry `onboardingComplete` settings events, and the
      * compatibility rule is that a field a log may hold is never removed.
      */
     val onboardingComplete: Boolean = false,

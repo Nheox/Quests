@@ -1,6 +1,8 @@
 package cl.nheox.quests.platform
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
@@ -62,9 +64,7 @@ public object DesktopServices {
         for (picker in FolderPicker.candidates(os, ::isOnPath)) {
             val attempt = when (picker) {
                 FolderPicker.MAC_PANEL -> withContext(Dispatchers.Swing) { macPanel(title, start) }
-                FolderPicker.ZENITY, FolderPicker.KDIALOG -> withContext(Dispatchers.IO) {
-                    external(FolderPicker.command(picker, title, start))
-                }
+                FolderPicker.ZENITY, FolderPicker.KDIALOG -> external(FolderPicker.command(picker, title, start))
                 FolderPicker.SWING -> withContext(Dispatchers.Swing) { swingChooser(title, start) }
             }
             when (attempt) {
@@ -97,15 +97,36 @@ public object DesktopServices {
         }
     }.getOrDefault(PickerAttempt.Unavailable)
 
-    private fun external(command: List<String>): PickerAttempt = runCatching {
-        val process = ProcessBuilder(command)
-            // GTK and Qt both talk on stderr; nobody reads it, and an unread
-            // pipe that fills up would hang the picker.
-            .redirectError(ProcessBuilder.Redirect.DISCARD)
-            .start()
-        val output = process.inputStream.bufferedReader().use { it.readText() }
-        FolderPicker.interpret(process.waitFor(), output)
-    }.getOrDefault(PickerAttempt.Unavailable)
+    /**
+     * Runs a picker process and reads its answer. If whoever asked stops
+     * waiting — the window closed, the app quit — the picker is closed too,
+     * rather than left on screen answering nobody.
+     */
+    private suspend fun external(command: List<String>): PickerAttempt {
+        val process = runCatching {
+            ProcessBuilder(command)
+                // GTK and Qt both talk on stderr; nobody reads it, and an
+                // unread pipe that fills up would hang the picker.
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+        }.getOrElse { return PickerAttempt.Unavailable }
+        return coroutineScope {
+            // The read blocks and cannot be interrupted, so it runs apart and
+            // the wait for it is what gets cancelled. Destroying the process
+            // closes its output, which is what ends the read.
+            val answer = async(Dispatchers.IO) {
+                runCatching {
+                    val output = process.inputStream.bufferedReader().use { it.readText() }
+                    FolderPicker.interpret(process.waitFor(), output)
+                }.getOrDefault(PickerAttempt.Unavailable)
+            }
+            try {
+                answer.await()
+            } finally {
+                process.destroy()
+            }
+        }
+    }
 
     /** The last resort, so that a bare system still gets a chooser of some kind. */
     private fun swingChooser(title: String, start: Path): PickerAttempt = runCatching {

@@ -154,7 +154,8 @@ public fun QuestButton(
                 vertical = if (compact) Space.xs else Space.sm,
             ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.xs),
+        // Centred for a button given a minimum width; the same as start-aligned otherwise.
+        horizontalArrangement = Arrangement.spacedBy(Space.xs, Alignment.CenterHorizontally),
     ) {
         if (glyph != null) QuestIcon(glyph, size = 14.dp, tint = content)
         Text(text, style = MaterialTheme.typography.labelLarge, color = content, maxLines = 1)

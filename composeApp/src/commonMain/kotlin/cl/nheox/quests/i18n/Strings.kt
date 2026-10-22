@@ -18,6 +18,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Month
+import java.time.YearMonth
 
 /**
  * Every piece of user-facing text in the app.
@@ -408,6 +409,12 @@ public interface Strings {
 
     /** "Thursday 22 October", the date beside the Standing title. */
     public fun longDate(date: LocalDate): String
+
+    /** A date as a field shows it: [longDate], with the year when it is not this one. */
+    public fun fieldDate(date: LocalDate, today: LocalDate): String
+
+    /** "October 2026", the title of a month in the calendar. */
+    public fun monthYear(month: YearMonth): String
 
     public fun weekdayShort(day: DayOfWeek): String
     public fun monthShort(month: Month): String

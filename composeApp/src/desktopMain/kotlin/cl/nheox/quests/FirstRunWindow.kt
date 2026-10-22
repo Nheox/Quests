@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -32,7 +34,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontFamily
@@ -50,7 +52,9 @@ import cl.nheox.quests.ui.theme.Radii
 import cl.nheox.quests.ui.theme.Space
 import cl.nheox.quests.ui.theme.strings
 import cl.nheox.quests.ui.theme.theme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.nio.file.Path
 
 /** Why a folder confirmed on first run did not open. */
@@ -78,7 +82,10 @@ internal enum class FirstRunFailure {
  * above all whether quests are already there — so choosing an existing synced
  * folder on a second computer is visibly the right move rather than a leap of
  * faith. The line is re-read whenever the window regains focus, which covers
- * the user who goes off to plug in a drive or create the folder in Finder.
+ * the user who goes off to plug in a drive or create the folder in Finder. It
+ * is read off the UI thread: a sleeping network mount or a sync client's
+ * placeholder folder can take seconds to answer, and the window must not
+ * freeze meanwhile.
  *
  * Every slot whose content depends on state — the status line, the error line
  * — is always laid out, so nothing jumps when a folder is picked or a problem
@@ -100,7 +107,13 @@ internal fun FirstRunContent(
     var selected by remember { mutableStateOf(suggested) }
     var failure by remember { mutableStateOf<FirstRunFailure?>(null) }
     var busy by remember { mutableStateOf(false) }
-    val status = remember(selected, windowFocused) { DataFolder.inspect(selected) }
+    // Paired with the folder it describes, so the answer for a folder just
+    // left behind never stands in for the one now selected.
+    val inspected by produceState<Inspected?>(null, selected, windowFocused) {
+        val folder = selected
+        value = Inspected(folder, withContext(Dispatchers.IO) { DataFolder.inspect(folder) })
+    }
+    val status = inspected?.takeIf { it.folder == selected }?.status
 
     fun choose() {
         if (busy) return
@@ -110,6 +123,9 @@ internal fun FirstRunContent(
                 chooseFolder(selected)?.let { chosen ->
                     selected = chosen
                     failure = null
+                    // Off the Choose button, so the Enter that naturally
+                    // follows a choice accepts it rather than asking again.
+                    rootFocus.requestFocus()
                 }
             } finally {
                 busy = false
@@ -118,7 +134,7 @@ internal fun FirstRunContent(
     }
 
     fun accept() {
-        if (busy || !status.usable) return
+        if (busy || status?.usable != true) return
         busy = true
         scope.launch {
             failure = confirm(selected)
@@ -130,7 +146,10 @@ internal fun FirstRunContent(
         Modifier
             .fillMaxSize()
             .background(theme.background)
-            .onPreviewKeyEvent { event ->
+            // After the focused control, not before it: Enter on "Choose…"
+            // presses that button, and only Enter that nothing else took
+            // accepts the folder.
+            .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
                     accept()
                     true
@@ -189,10 +208,16 @@ internal fun FirstRunContent(
             ) {
                 QuestButton(text.firstRunChoose, onClick = ::choose, glyph = Glyph.FOLDER, enabled = !busy)
                 QuestButton(
-                    firstRunAction(selected, AppPaths.defaultVault(), status, text),
+                    // The label keeps the last answer while a new one is read,
+                    // rather than flicking to another wording for a frame.
+                    firstRunAction(selected, AppPaths.defaultVault(), status ?: inspected?.status, text),
                     onClick = ::accept,
+                    // One width for every label it can show, so "Create this
+                    // folder" and "Use this folder" swap without the button
+                    // changing size under the pointer.
+                    modifier = Modifier.widthIn(min = PRIMARY_MIN_WIDTH),
                     primary = true,
-                    enabled = !busy && status.usable,
+                    enabled = !busy && status?.usable == true,
                 )
             }
         }
@@ -201,9 +226,16 @@ internal fun FirstRunContent(
     LaunchedEffect(Unit) { rootFocus.requestFocus() }
 }
 
-/** The path and what is in it: a value shift from the window, no border (DESIGN §7). */
+/** What [DataFolder.inspect] said about [folder]. */
+private class Inspected(val folder: Path, val status: FolderStatus)
+
+/**
+ * The path and what is in it: a value shift from the window, no border
+ * (DESIGN §7). [status] is null while the folder is being read; its line stays
+ * laid out, empty, so nothing below it moves.
+ */
 @Composable
-private fun FolderCard(folder: Path, status: FolderStatus, text: Strings) {
+private fun FolderCard(folder: Path, status: FolderStatus?, text: Strings) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -225,9 +257,9 @@ private fun FolderCard(folder: Path, status: FolderStatus, text: Strings) {
                 overflow = TextOverflow.MiddleEllipsis,
             )
             Spacer(Modifier.height(Space.xxs))
-            if (status.usable) {
+            if (status == null || status.usable) {
                 Text(
-                    folderStatusText(status, text),
+                    status?.let { folderStatusText(it, text) }.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = theme.textMuted,
                     maxLines = 1,
@@ -258,7 +290,7 @@ private fun Problem(message: String) {
  * ~/Quests" says exactly what one click will do; any other folder is "this
  * folder", since its path is right above the button.
  */
-internal fun firstRunAction(selected: Path, default: Path, status: FolderStatus, text: Strings): String {
+internal fun firstRunAction(selected: Path, default: Path, status: FolderStatus?, text: Strings): String {
     val creates = status == FolderStatus.Missing
     val isDefault = selected.toAbsolutePath().normalize() == default.toAbsolutePath().normalize()
     return when {
@@ -285,6 +317,9 @@ private fun failureText(failure: FirstRunFailure, text: Strings): String = when 
 }
 
 private val MARK_SIZE = 72.dp
+
+/** Wide enough for the longest label, "Create this folder". */
+private val PRIMARY_MIN_WIDTH = 180.dp
 
 /** Two lines of error text, reserved whether or not there is an error to show. */
 private val ERROR_SLOT = 32.dp

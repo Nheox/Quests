@@ -39,12 +39,14 @@ import cl.nheox.quests.i18n.Translations
 import cl.nheox.quests.platform.AppPaths
 import cl.nheox.quests.platform.DataFolder
 import cl.nheox.quests.platform.DesktopServices
+import cl.nheox.quests.platform.FolderSwitch
 import cl.nheox.quests.platform.GnomeKeybinding
 import cl.nheox.quests.platform.LaunchPlan
 import cl.nheox.quests.platform.MacIntegration
 import cl.nheox.quests.platform.Move
 import cl.nheox.quests.platform.ReminderScheduler
 import cl.nheox.quests.platform.SingleInstance
+import cl.nheox.quests.platform.SwitchOutcome
 import cl.nheox.quests.projection.QuestDraft
 import cl.nheox.quests.projection.QuestStore
 import cl.nheox.quests.projection.QuestsState
@@ -59,7 +61,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.system.exitProcess
 
@@ -202,7 +203,15 @@ public fun main(args: Array<String>) {
     }
     java.lang.Runtime.getRuntime().addShutdownHook(Thread { instance.release() })
 
-    val (stored, notice) = switchToPendingFolder(AppPaths.storedVault())
+    // A capture-only launch leaves a waiting folder change for the next full
+    // one: it has no window to report the outcome in, and the outcome of a
+    // folder change is not something to learn about by its absence. What it
+    // captures goes to the current folder and is copied along with the rest.
+    val (stored, notice) = if (wantsCapture) {
+        AppPaths.storedVault() to null
+    } else {
+        switchToPendingFolder(AppPaths.storedVault())
+    }
     val plan = LaunchPlan.decide(stored, AppPaths.defaultVault(), DataFolder::inspect)
     // A folder that looked fine but still fails to open is asked about again,
     // not reported with a stack trace (DESIGN §5).
@@ -217,40 +226,27 @@ public fun main(args: Array<String>) {
 }
 
 /**
- * Finishes a data-folder change chosen in Settings during an earlier session:
- * copies this device's own files across, then repoints the config.
- *
- * Done here, before anything is loaded, because this is the one moment when
- * this device is certainly not writing to the old folder. Returns the folder to
- * open and, if a switch was waiting, what to tell the user about it.
+ * Finishes a data-folder change chosen in Settings during an earlier session
+ * (see [FolderSwitch]). Returns the folder to open and, if a change was
+ * waiting, what to tell the user about it.
  */
 private fun switchToPendingFolder(stored: Path?): Pair<Path?, ((Strings) -> String)?> {
     val pending = AppPaths.pendingVault() ?: return stored to null
     // Cleared whatever happens: a switch that failed is reported once, not
     // retried silently on every launch.
     AppPaths.clearPendingVault()
-    if (stored == null) return null to null
-
+    val (folder, outcome) = FolderSwitch.finish(
+        stored = stored,
+        pending = pending,
+        device = { DeviceIdentity.loadOrCreate(AppPaths.deviceFile(), AppPaths.hostname()).id },
+        remember = AppPaths::rememberVault,
+    )
     val shown = AppPaths.display(pending)
-    // With the old folder gone (an unplugged drive) there is nothing to copy,
-    // and switching anyway would leave this device's history behind unseen.
-    if (!Files.isDirectory(stored)) return stored to { text -> text.folderSwitchFailed(shown) }
-
-    val device = DeviceIdentity.loadOrCreate(AppPaths.deviceFile(), AppPaths.hostname())
-    // An unreadable old folder throws rather than answering; that is a failed
-    // switch like any other, not a reason to fail the launch.
-    val result = runCatching { DataFolder.copyOwnFiles(stored, pending, device.id) }.getOrNull()
-        ?: return stored to { text -> text.folderSwitchFailed(shown) }
-    return when (result) {
-        is Move.Copied -> if (AppPaths.rememberVault(pending)) {
-            pending to { text -> text.folderSwitched(shown) }
-        } else {
-            stored to { text -> text.folderSwitchFailed(shown) }
-        }
-
-        Move.SameFolder -> stored to null
-        is Move.Conflict -> stored to { text -> text.folderSwitchConflict(result.file) }
-        is Move.Unusable, is Move.Failed -> stored to { text -> text.folderSwitchFailed(shown) }
+    return folder to when (outcome) {
+        null, SwitchOutcome.Unchanged -> null
+        is SwitchOutcome.Switched -> { text -> text.folderSwitched(shown) }
+        is SwitchOutcome.Failed -> { text -> text.folderSwitchFailed(shown) }
+        is SwitchOutcome.Conflict -> { text -> text.folderSwitchConflict(outcome.file) }
     }
 }
 
@@ -357,22 +353,27 @@ private fun ApplicationScope.FirstRunWindow(
     onOpened: (Runtime) -> Unit,
 ) {
     val strings = remember { Translations.of(Language.EN) }
+    val windowState = rememberWindowState(
+        size = DpSize(560.dp, 460.dp),
+        position = WindowPosition(androidx.compose.ui.Alignment.Center),
+    )
     Window(
         onCloseRequest = ::exitApplication,
         title = strings.appName,
         icon = icon,
         resizable = false,
-        state = rememberWindowState(
-            size = DpSize(560.dp, 460.dp),
-            position = WindowPosition(androidx.compose.ui.Alignment.Center),
-        ),
+        state = windowState,
     ) {
         // Any request to see the app lands here until there is an app to see.
-        // toFront alone: it activates the window and hands focus back to
-        // what had it, whereas requestFocus on the frame would take focus
-        // away from the content and leave the keyboard dead.
+        // Restored first, since toFront does not bring a minimised window
+        // back. toFront and not requestFocus: it activates the window and
+        // hands focus back to what had it, whereas requestFocus on the frame
+        // would take focus away from the content and leave the keyboard dead.
         LaunchedEffect(shell.raises, shell.captures) {
-            if (shell.raises + shell.captures > 0) window.toFront()
+            if (shell.raises + shell.captures > 0) {
+                windowState.isMinimized = false
+                window.toFront()
+            }
         }
         QuestsTheme(dark = dark, strings = strings) {
             FirstRunContent(

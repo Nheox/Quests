@@ -19,6 +19,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Month
+import java.time.YearMonth
 import java.util.Locale
 
 /** British English, the language the app was written in. */
@@ -465,6 +466,11 @@ public object StringsEn : Strings {
     }
 
     override fun longDate(date: LocalDate): String = "${weekdayLong(date.dayOfWeek)} ${date.dayOfMonth} ${monthLong(date.month)}"
+
+    override fun fieldDate(date: LocalDate, today: LocalDate): String =
+        if (date.year == today.year) longDate(date) else "${longDate(date)} ${date.year}"
+
+    override fun monthYear(month: YearMonth): String = "${monthLong(month.month)} ${month.year}"
 
     override fun weekdayShort(day: DayOfWeek): String = weekdayLong(day).take(3)
 

@@ -21,8 +21,6 @@ import cl.nheox.quests.ui.theme.Palette
 import cl.nheox.quests.ui.theme.Space
 import cl.nheox.quests.ui.theme.strings
 import cl.nheox.quests.ui.theme.theme
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * A rating shown as a row of filled and empty steps.
@@ -116,5 +114,3 @@ public fun PointsPill(points: Int, modifier: Modifier = Modifier) {
         leading = Glyph.COIN,
     )
 }
-
-public val LongDate: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)

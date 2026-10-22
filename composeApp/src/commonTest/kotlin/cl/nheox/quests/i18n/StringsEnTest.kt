@@ -3,6 +3,7 @@ package cl.nheox.quests.i18n
 import cl.nheox.quests.domain.PriorityBreakdown
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -97,5 +98,14 @@ class StringsEnTest {
         assertEquals("Reminder today 14:30", StringsEn.reminderAt(today.atTime(14, 30), today))
         assertEquals("Reminder tomorrow 09:05", StringsEn.reminderAt(today.plusDays(1).atTime(9, 5), today))
         assertEquals("Reminder Thu 29 Oct 08:00", StringsEn.reminderAt(LocalDateTime.of(2026, 10, 29, 8, 0), today))
+    }
+
+    @Test
+    fun `dates are spelled in English whatever the system language`() {
+        val today = LocalDate.of(2026, 10, 22)
+        assertEquals("Thursday 22 October", StringsEn.fieldDate(today, today))
+        assertEquals("Friday 1 January 2027", StringsEn.fieldDate(LocalDate.of(2027, 1, 1), today))
+        assertEquals("October 2026", StringsEn.monthYear(YearMonth.of(2026, 10)))
+        assertEquals("M", StringsEn.weekdayInitial(java.time.DayOfWeek.MONDAY))
     }
 }

@@ -51,14 +51,16 @@ public enum class Pin {
          * Reads a stored `manualOrder`.
          *
          * The automatic block is anchored at 0, which is also how legacy
-         * values map. Before 0.5 the field held creation order, and "move to
-         * top" and "move to bottom" wrote one past the lowest or highest
-         * sibling. Creation order lived in `QuestCreated` and is ignored, so
-         * only those explicit moves can reach here: a "move to top" landed at 0
-         * or below in practice and still reads as a top pin, a "move to bottom"
-         * landed above 0 and reads as a bottom pin. The rare old "move to top"
-         * that landed above 0 — every lower sibling already deleted — reads as
-         * a bottom pin, and one keystroke re-pins it.
+         * values map. Before pins (SPEC v0.5; the app's own version did not
+         * change) the field held creation order, counting up from 1 per
+         * sibling group, and "move to top" and "move to bottom" wrote one past
+         * the lowest or highest sibling. Creation order lived in
+         * `QuestCreated` and is ignored, so only those explicit moves can
+         * reach here. A "move to top" landed at 0 or below whenever the first
+         * sibling still existed, and reads as a top pin; a "move to bottom"
+         * always landed above 0, and reads as a bottom pin. An old "move to
+         * top" made after the first siblings were deleted landed above 0 and
+         * reads as a bottom pin; one keystroke re-pins it.
          */
         public fun of(manualOrder: Int?): Pin = when {
             manualOrder == null -> NONE

@@ -49,9 +49,8 @@ import cl.nheox.quests.ui.theme.theme
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle as JavaTextStyle
-import java.util.Locale
 
 @Composable
 public fun FieldLabel(text: String, modifier: Modifier = Modifier) {
@@ -293,13 +292,15 @@ public fun MonthGrid(
     onSelect: (LocalDate) -> Unit,
     onMonthChange: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    locale: Locale = Locale.getDefault(),
 ) {
+    // Names from the strings, not the system locale: the app is in English
+    // (§1.1), and a Spanish month over English buttons reads as a bug.
+    val text = strings
     Column(modifier.width(266.dp).padding(Space.sm)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconAction(Glyph.CHEVRON_UP, "−1", size = 26.dp, onClick = { onMonthChange(month.minusMonths(1)) })
             Text(
-                text = month.format(monthTitle),
+                text = text.monthYear(YearMonth.from(month)),
                 style = MaterialTheme.typography.titleSmall,
                 color = theme.text,
                 modifier = Modifier.weight(1f).padding(horizontal = Space.sm),
@@ -311,7 +312,7 @@ public fun MonthGrid(
             // Monday-based, which is both the ISO week and the Chilean one.
             DayOfWeek.entries.forEach { day ->
                 Text(
-                    text = day.getDisplayName(JavaTextStyle.NARROW_STANDALONE, locale),
+                    text = text.weekdayInitial(day),
                     style = MaterialTheme.typography.labelSmall,
                     color = theme.textFaint,
                     modifier = Modifier.weight(1f).padding(vertical = Space.xxs),
@@ -421,5 +422,4 @@ internal fun parseTime(text: String): LocalTime? {
     }
 }
 
-private val monthTitle: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
 private val timeOnly: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

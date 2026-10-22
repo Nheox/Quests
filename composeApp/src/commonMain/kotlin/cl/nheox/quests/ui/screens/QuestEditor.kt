@@ -361,7 +361,7 @@ private fun DueDateEditor(app: AppState, quest: Quest) {
     Column(Modifier.fillMaxWidth()) {
         Row(horizontalArrangement = Arrangement.spacedBy(Space.xs), verticalAlignment = Alignment.CenterVertically) {
             QuestButton(
-                text = quest.dueDate?.format(cl.nheox.quests.ui.components.LongDate) ?: text.fieldNone,
+                text = quest.dueDate?.let { text.fieldDate(it, today) } ?: text.fieldNone,
                 glyph = Glyph.CALENDAR,
                 compact = true,
                 onClick = { calendarOpen = !calendarOpen },
