@@ -1,5 +1,6 @@
 package cl.nheox.quests.ui.components
 
+import androidx.compose.ui.text.drawText
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +60,7 @@ public fun RadarChart(
     axes: List<RadarAxis>,
     modifier: Modifier = Modifier,
     rings: Int = 4,
+    labelled: Boolean = false,
 ) {
     if (axes.size < 3) {
         // A radar with two axes is a line and tells you nothing; say so rather
@@ -76,9 +78,12 @@ public fun RadarChart(
     val grid = theme.border
     val gridStrong = theme.borderStrong
     val fill = theme.accent
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelLarge.copy(color = theme.textMuted)
 
     Box(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize().padding(Space.xl)) {
+        // Labelled, the names need room outside the outer ring.
+        Canvas(Modifier.fillMaxSize().padding(if (labelled) RadarLabelRoom else Space.xl)) {
             val centre = Offset(size.width / 2f, size.height / 2f)
             val radius = size.minDimension / 2f
             val step = (2.0 * Math.PI / axes.size).toFloat()
@@ -126,6 +131,39 @@ public fun RadarChart(
             drawPath(shape, fill.copy(alpha = 0.22f))
             drawPath(shape, fill, style = Stroke(width = 2f))
 
+            if (labelled) {
+                // Each name outside its vertex, aligned away from the centre:
+                // to the right of a right-hand vertex, centred over the top one.
+                val gap = 8.dp.toPx()
+                val maxWidth = RadarLabelRoom.toPx() * 1.6f
+                axes.forEachIndexed { index, axis ->
+                    val angle = offsetAngle + step * index
+                    val dx = cos(angle)
+                    val dy = sin(angle)
+                    val layout = measurer.measure(
+                        androidx.compose.ui.text.AnnotatedString(axis.label),
+                        style = labelStyle,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth.toInt()),
+                    )
+                    val anchor = Offset(centre.x + (radius + gap) * dx, centre.y + (radius + gap) * dy)
+                    val w = layout.size.width.toFloat()
+                    val h = layout.size.height.toFloat()
+                    val x = when {
+                        dx > 0.2f -> anchor.x
+                        dx < -0.2f -> anchor.x - w
+                        else -> anchor.x - w / 2f
+                    }
+                    val y = when {
+                        dy > 0.2f -> anchor.y
+                        dy < -0.2f -> anchor.y - h
+                        else -> anchor.y - h / 2f
+                    }
+                    drawText(layout, topLeft = Offset(x, y))
+                }
+            }
+
             axes.forEachIndexed { index, axis ->
                 val angle = offsetAngle + step * index
                 val value = axis.value.coerceIn(0f, 1f) * 0.94f + 0.06f
@@ -141,6 +179,9 @@ public fun RadarChart(
         }
     }
 }
+
+/** Room around a labelled radar for the names at its vertices. */
+private val RadarLabelRoom = 64.dp
 
 /** The legend for the radar, where the axis names actually fit. */
 @Composable

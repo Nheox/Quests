@@ -198,6 +198,16 @@ public interface Strings {
     public val actionNewReward: String
     public val actionNewItem: String
     public val itemOutOfStock: String
+    public val skillsBalance: String
+    public val skillsChoose: String
+    public val skillsBalanceCaption: String
+    public val skillsUncategorised: String
+    public val skillNotStarted: String
+    public val skillNoXp: String
+    public val actionNewSkill: String
+    public val skillSortLevel: String
+    public val skillSortName: String
+    public val skillSortRecent: String
     public val fieldParent: String
     public val topLevel: String
     public val repeatNever: String
@@ -340,6 +350,15 @@ public interface Strings {
 
     /** "you have 3". */
     public fun youHave(quantity: Int): String
+
+    /** "Sort: level". */
+    public fun sortedBy(what: String): String
+
+    /** "last worked on today", "… yesterday", "… 3 days ago", "… on 3 Sep". */
+    public fun lastWorkedOn(date: LocalDate, today: LocalDate): String
+
+    /** "31 / 340 XP": XP into the current level against what the level takes. */
+    public fun xpProgress(total: Long, nextLevelAt: Long): String
 
     /** "Moved 1 quest", "Moved 3 quests": the snackbar after Move under…. */
     public fun questsMoved(count: Int): String

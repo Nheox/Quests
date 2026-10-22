@@ -189,6 +189,16 @@ public object StringsEn : Strings {
     override val actionNewReward: String = "New reward"
     override val actionNewItem: String = "New item"
     override val itemOutOfStock: String = "out of stock"
+    override val skillsBalance: String = "Balance"
+    override val skillsChoose: String = "Choose skills"
+    override val skillsBalanceCaption: String = "Which skills you have been working on most"
+    override val skillsUncategorised: String = "Other"
+    override val skillNotStarted: String = "not started yet"
+    override val skillNoXp: String = "no XP yet"
+    override val actionNewSkill: String = "New skill"
+    override val skillSortLevel: String = "level"
+    override val skillSortName: String = "name"
+    override val skillSortRecent: String = "recent"
     override val fieldParent: String = "Parent quest"
     override val topLevel: String = "Top level"
     override val repeatNever: String = "Doesn't repeat"
@@ -357,6 +367,20 @@ public object StringsEn : Strings {
     override fun itemDescription(consumable: Boolean): String = if (consumable) "consumable" else "keeps"
 
     override fun youHave(quantity: Int): String = "you have $quantity"
+
+    override fun sortedBy(what: String): String = "Sort: $what"
+
+    override fun lastWorkedOn(date: LocalDate, today: LocalDate): String {
+        val days = java.time.temporal.ChronoUnit.DAYS.between(date, today)
+        return when {
+            days <= 0L -> "last worked on today"
+            days == 1L -> "last worked on yesterday"
+            days < 7 -> "last worked $days days ago"
+            else -> "last worked on ${date.dayOfMonth} ${monthShort(date.month)}"
+        }
+    }
+
+    override fun xpProgress(total: Long, nextLevelAt: Long): String = "${grouped(total)} / ${grouped(nextLevelAt)} XP"
 
     override fun questsMoved(count: Int): String = if (count == 1) "Moved 1 quest" else "Moved $count quests"
 

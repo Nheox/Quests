@@ -112,6 +112,9 @@ public class AppState(
 
     public var suggesterMinutes: Int by mutableStateOf(30)
 
+    /** The skills the Balance radar shows; null means the strongest few. Kept for the session. */
+    public var radarSkills: Set<String>? by mutableStateOf(null)
+
     /**
      * The data folder chosen in Settings, as shown to the user, until the next
      * launch switches to it. Null when no switch is waiting.
