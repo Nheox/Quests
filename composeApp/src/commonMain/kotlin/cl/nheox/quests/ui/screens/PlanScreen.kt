@@ -17,6 +17,8 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import cl.nheox.quests.domain.Clock
+import cl.nheox.quests.domain.Priority
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.projection.QuestsState
 import cl.nheox.quests.ui.AppState
@@ -48,8 +50,11 @@ public fun PlanScreen(
     val today = app.clock.today()
     val collapsed = remember { mutableStateMapOf<String, Boolean>() }
 
-    val rows = remember(state.quests, collapsed.toMap()) {
-        flatten(state, collapsed)
+    // Keyed on the day as well, because the order depends on it: at midnight
+    // tomorrow's quests become today's and should rise without waiting for an
+    // unrelated edit to trigger a re-sort.
+    val rows = remember(state.quests, collapsed.toMap(), today) {
+        flatten(state, collapsed, app.clock)
     }
 
     Column(modifier.fillMaxSize()) {
@@ -113,6 +118,10 @@ internal data class PlanRow(val quest: Quest, val depth: Int, val childCount: In
 /**
  * Depth-first flatten of the hierarchy.
  *
+ * Each sibling group is in the automatic order, pins included, exactly as a
+ * flat list would be (§5.6): pins are per sibling group, which is what makes
+ * them mean something in a tree.
+ *
  * Carries a visited set because the tree comes from a file the user is invited
  * to edit by hand: a parent cycle introduced in an editor must produce a
  * truncated tree, not an infinite loop that hangs the window.
@@ -120,21 +129,19 @@ internal data class PlanRow(val quest: Quest, val depth: Int, val childCount: In
 internal fun flatten(
     state: QuestsState,
     collapsed: Map<String, Boolean>,
+    clock: Clock,
 ): List<PlanRow> {
     val out = mutableListOf<PlanRow>()
     val visited = HashSet<String>()
 
     fun walk(quest: Quest, depth: Int) {
         if (!visited.add(quest.id)) return
-        val children = state.children(quest.id).filter { it.isOpen }
+        val children = Priority.order(state.children(quest.id).filter { it.isOpen }, clock)
         out += PlanRow(quest, depth, children.size)
         if (collapsed[quest.id] == true) return
         children.forEach { walk(it, depth + 1) }
     }
 
-    state.roots()
-        .filter { it.isOpen }
-        .sortedBy { it.manualOrder }
-        .forEach { walk(it, 0) }
+    Priority.order(state.roots().filter { it.isOpen }, clock).forEach { walk(it, 0) }
     return out
 }

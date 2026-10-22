@@ -86,6 +86,51 @@ total itself.
 > or retune the exponent to around 1.62, which is roughly what those three
 > figures imply.
 
+## Priority (automatic ordering)
+
+The default order of every list of open quests. Recomputed on read, never
+stored, so retuning a weight reorders every list without touching a log line.
+Implemented in `domain/Priority.kt`, with every weight and bucket boundary
+pinned in `PriorityTest.kt`.
+
+```
+urgencyW = [0, 1, 2, 4, 7]              // Whenever … Critical
+fearW    = [0, 0.4, 0.9, 1.5, 2.2]      // None … Severe
+dueW:
+  overdue       → 6 + min(daysOverdue, 10) × 0.4
+  due today     → 5
+  due tomorrow  → 3
+  due ≤ 3 days  → 2
+  due ≤ 7 days  → 1
+  later or none → 0
+ageW     = min(daysSinceCreated × 0.05, 3.0)
+
+priority = urgencyW + dueW + fearW + ageW
+```
+
+Days are whole calendar days in the device's time zone. "Overdue" means what it
+means everywhere else in the app: a quest due today at 09:00 is overdue at
+10:00, by zero days, so it scores 6 and outranks one merely due today.
+
+- **Fear pushes a quest up, not down.** Surfacing the avoided thing is the
+  point; the suggester is where fear meets energy.
+- **Age is a slow ramp with a ceiling.** Something untouched for months drifts
+  upward, but 3.0 can never outrank a genuine emergency.
+- **Difficulty is absent.** It only breaks ties: among equal scores the shorter
+  estimate comes first (no estimate counts as the 30-minute reference), then
+  the title ignoring case, then the id, so the order is total and two devices
+  always agree on it.
+
+**Pins** override the score within a sibling group. `manualOrder` is null for
+almost every quest. "Pin to top" sets it to `min(0, lowest sibling pin) − 1`,
+"pin to bottom" to `max(0, highest sibling pin) + 1`, and "clear pin" back to
+null, so the automatic block sits at 0 between the two: top pins ascending,
+then everything else by score, then bottom pins ascending. Reversing the sort
+direction mirrors the whole list, pins included. Before 0.5 every quest carried
+a creation-order value at creation; that value is ignored, because it never
+meant "pinned". Old explicit moves still read sensibly: values at or below 0 are
+top pins, values above 0 bottom pins.
+
 ## Energy
 
 - **Auto** (the default): `20 + 80 × (1 − t)^1.25`, where `t` is the fraction

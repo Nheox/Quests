@@ -5,15 +5,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 class SortingTest {
 
     private val created = Instant.parse("2026-10-01T09:00:00Z")
+    private val clock = Clock.fixed(Instant.parse("2026-10-15T09:00:00Z"), ZoneId.of("UTC"))
 
     private fun quest(
         id: String,
         title: String = id,
-        order: Int = 0,
+        order: Int? = null,
         due: LocalDate? = null,
         difficulty: Difficulty = Difficulty.MODERATE,
         urgency: Urgency = Urgency.NORMAL,
@@ -32,11 +34,48 @@ class SortingTest {
 
     @Test
     fun `manual order is respected`() {
-        val quests = listOf(quest("c", order = 3), quest("a", order = 1), quest("b", order = 2))
+        // Pins only: top pins, then the unpinned at the anchor by title, then
+        // bottom pins, whatever the scores say.
+        val quests = listOf(
+            quest("c", order = 3),
+            quest("free-b", urgency = Urgency.CRITICAL),
+            quest("a", order = 1),
+            quest("top", order = -1),
+            quest("b", order = 2),
+            quest("free-a", urgency = Urgency.WHENEVER),
+        )
         assertEquals(
-            listOf("a", "b", "c"),
+            listOf("top", "free-a", "free-b", "a", "b", "c"),
             Sorting.sort(quests, SortOrder(SortKey.MANUAL)).map { it.id },
         )
+    }
+
+    @Test
+    fun `priority sorts highest first and flips as a whole, pins included`() {
+        val quests = listOf(
+            quest("calm", urgency = Urgency.LOW),
+            quest("sunk", urgency = Urgency.CRITICAL, order = 1),
+            quest("lifted", urgency = Urgency.WHENEVER, order = -1),
+            quest("urgent", urgency = Urgency.CRITICAL),
+            quest("overdue", urgency = Urgency.NORMAL, due = LocalDate.of(2026, 10, 10)),
+        )
+        // Overdue by five days (10.0) plus Normal (2.0) outranks Critical (7.0)
+        // with nothing due; every quest here is the same 0.7 of age.
+        val descending = listOf("lifted", "overdue", "urgent", "calm", "sunk")
+        assertEquals(
+            descending,
+            Sorting.sort(quests, SortOrder(SortKey.PRIORITY, SortDirection.DESCENDING), clock = clock).map { it.id },
+        )
+        assertEquals(
+            descending.reversed(),
+            Sorting.sort(quests, SortOrder(SortKey.PRIORITY, SortDirection.ASCENDING), clock = clock).map { it.id },
+        )
+    }
+
+    @Test
+    fun `sort keys other than priority and manual ignore pins`() {
+        val quests = listOf(quest("c", order = -5), quest("a", order = 9), quest("b"))
+        assertEquals(listOf("a", "b", "c"), Sorting.sort(quests, SortOrder(SortKey.NAME)).map { it.id })
     }
 
     @Test
@@ -106,7 +145,7 @@ class SortingTest {
             SortDirection.entries.forEach { direction ->
                 // Exhaustive: no key may throw on nulls, and all of them must
                 // return the whole list.
-                val sorted = Sorting.sort(quests, SortOrder(key, direction))
+                val sorted = Sorting.sort(quests, SortOrder(key, direction), clock = clock)
                 assertEquals(2, sorted.size, "$key/$direction lost a quest")
             }
         }

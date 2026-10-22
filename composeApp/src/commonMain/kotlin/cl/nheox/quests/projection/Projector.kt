@@ -96,7 +96,9 @@ public object Projector {
                             repetition = event.repetition,
                             reminders = event.reminders,
                             parentId = event.parentId,
-                            manualOrder = event.manualOrder,
+                            // QuestCreated.manualOrder is legacy creation order,
+                            // never a pin, so it is not read: every quest starts
+                            // in the automatic order.
                             skillIds = event.skillIds,
                             createdAt = event.ts,
                             updatedAt = event.ts,
@@ -516,7 +518,9 @@ public object Projector {
             if (parent == quest.id) quest else quest.copy(parentId = parent)
         }
 
-        QuestFields.MANUAL_ORDER -> value.asInt()?.let { quest.copy(manualOrder = it) } ?: quest
+        // An int pins (see Pin.of for how legacy values read); an explicit null
+        // clears the pin and returns the quest to the automatic order.
+        QuestFields.MANUAL_ORDER -> quest.copy(manualOrder = value.asIntOrNull())
         QuestFields.SKILL_IDS -> quest.copy(
             skillIds = value.decodeOrNull(SetSerializer(String.serializer())) ?: quest.skillIds,
         )

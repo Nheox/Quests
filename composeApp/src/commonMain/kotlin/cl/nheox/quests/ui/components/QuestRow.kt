@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import cl.nheox.quests.domain.Pin
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.QuestState
 import cl.nheox.quests.ui.theme.Glyph
@@ -150,7 +151,29 @@ public fun QuestRow(
             } else {
                 XpPill(quest.projectedXp())
             }
+            // A pin places an open quest; on a finished one, in a history list
+            // that ignores pins, the marker would be noise.
+            PinMarker(if (quest.isOpen) quest.pin else Pin.NONE)
             MarkDot(marked = marked, onClick = onToggleMark)
+        }
+    }
+}
+
+/**
+ * A pinned quest's marker, in a slot every row reserves.
+ *
+ * The slot is there whether or not the quest is pinned, so pinning or clearing
+ * a pin never shifts the row's trailing edge, and the marker lands at the same
+ * x in every row: a column of pins down the right reads at a glance.
+ */
+@Composable
+private fun PinMarker(pin: Pin) {
+    val text = strings
+    Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+        when (pin) {
+            Pin.TOP -> QuestIcon(Glyph.PIN, size = 12.dp, tint = theme.textMuted, description = text.pinnedToTop)
+            Pin.BOTTOM -> QuestIcon(Glyph.PIN, size = 12.dp, tint = theme.textMuted, description = text.pinnedToBottom)
+            Pin.NONE -> Unit
         }
     }
 }

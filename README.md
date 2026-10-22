@@ -18,6 +18,10 @@ derived from that app's code, assets, strings or balance numbers
   finish 88% of your low-fear quests and 25% of your high-fear ones.
 - **Failure is an explicit outcome.** A quest can be *failed*, not merely left
   undone. By default that costs nothing; it just keeps the record honest.
+- **The list orders itself.** Rate a quest once and the app decides what rises:
+  urgency, how soon or how late it is due, fear and age add up to a priority
+  score that every quest shows itemised. Disagree, and `[` or `]` pins a quest
+  to the top or bottom of its list; `\` lets it go again.
 - **You own the files.** Plain JSONL in a folder you choose, readable without
   the app. No account, no server, no telemetry, and no network code at all.
 - **Keyboard first.** Every action has a key, and `Ctrl+K` lists them.

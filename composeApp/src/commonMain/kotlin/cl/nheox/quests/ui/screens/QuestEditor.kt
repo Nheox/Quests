@@ -23,10 +23,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cl.nheox.quests.domain.Dates
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.Pin
+import cl.nheox.quests.domain.Priority
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.Reminder
 import cl.nheox.quests.domain.Urgency
@@ -106,6 +109,7 @@ public fun QuestEditorPane(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Space.md),
         ) {
+            if (quest.isOpen) PriorityStrip(app, quest)
             TitleAndNotes(app, quest)
 
             SectionHeader(text.fieldDifficulty)
@@ -224,6 +228,69 @@ private fun EditorHeader(app: AppState, state: QuestsState, quest: Quest) {
             IconAction(Glyph.ARROW_UP, text.actionPromote, onClick = { app.store.promoteToTopLevel(quest.id) })
         }
         IconAction(Glyph.CROSS, text.actionClose, onClick = { app.selectedId = null })
+    }
+}
+
+/**
+ * Why this quest sits where it does in its list, and the override for it.
+ *
+ * The score is shown itemised because an order that cannot explain itself
+ * gets hand-sorted instead (§3). Open quests only: priority orders the open
+ * lists, and a finished quest has nowhere left to rise to. The pin row keeps
+ * one height whether or not the quest is pinned, so pinning never nudges the
+ * fields below it.
+ */
+@Composable
+private fun PriorityStrip(app: AppState, quest: Quest) {
+    val text = strings
+    val breakdown = Priority.breakdown(quest, app.clock)
+
+    Column(Modifier.fillMaxWidth().padding(top = Space.md)) {
+        Text(
+            text.priorityBreakdown(breakdown),
+            // Tabular figures, so the line holds still as a rating changes.
+            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+            color = theme.textFaint,
+            // One line, always. The selectors that change the score sit below
+            // this, so a line that wrapped as a rating changed would move the
+            // control under the pointer. The longest score fits the pane at the
+            // default text size; a larger one truncates the tail instead.
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Row(
+            Modifier.fillMaxWidth().height(28.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Space.xs),
+        ) {
+            when (val pin = quest.pin) {
+                Pin.NONE -> {
+                    Text(
+                        text.priorityAutomatic,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.textFaint,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconAction(Glyph.ARROW_UP, text.actionPinToTop, size = 26.dp, onClick = {
+                        app.store.pinToTop(quest.id)
+                    })
+                    IconAction(Glyph.ARROW_DOWN, text.actionPinToBottom, size = 26.dp, onClick = {
+                        app.store.pinToBottom(quest.id)
+                    })
+                }
+
+                Pin.TOP, Pin.BOTTOM -> {
+                    QuestIcon(Glyph.PIN, size = 12.dp, tint = theme.textMuted)
+                    Text(
+                        if (pin == Pin.TOP) text.pinnedToTop else text.pinnedToBottom,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.textMuted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuestButton(text.actionClearPin, compact = true, onClick = { app.store.clearPin(quest.id) })
+                }
+            }
+        }
     }
 }
 

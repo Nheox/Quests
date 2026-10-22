@@ -322,16 +322,118 @@ class StoreTest {
     }
 
     @Test
-    fun `move to top and bottom reorder within siblings`() {
+    fun `pin to top and bottom reorder within siblings`() {
         val a = store.createQuest(QuestDraft(title = "a"))
         val b = store.createQuest(QuestDraft(title = "b"))
         val c = store.createQuest(QuestDraft(title = "c"))
+        assertTrue(listOf(a, b, c).all { state().quests.getValue(it).manualOrder == null }, "new quests start unpinned")
 
-        store.moveToTop(c)
-        assertTrue(state().quests.getValue(c).manualOrder < state().quests.getValue(a).manualOrder)
-        store.moveToBottom(a)
-        assertTrue(state().quests.getValue(a).manualOrder > state().quests.getValue(b).manualOrder)
+        store.pinToTop(c)
+        assertEquals(-1, state().quests.getValue(c).manualOrder)
+        store.pinToBottom(a)
+        assertEquals(1, state().quests.getValue(a).manualOrder)
+        assertEquals(listOf(c, b, a), visibleInPriorityOrder())
+
+        // Each new pin goes beyond the ones already there.
+        store.pinToTop(b)
+        assertEquals(-2, state().quests.getValue(b).manualOrder)
+        store.pinToBottom(c)
+        assertEquals(2, state().quests.getValue(c).manualOrder)
+        assertEquals(listOf(b, a, c), visibleInPriorityOrder())
     }
+
+    @Test
+    fun `pins are per sibling group`() {
+        val parent = store.createQuest(QuestDraft(title = "Parent"))
+        val child = store.createQuest(QuestDraft(title = "Child", parentId = parent))
+        val root = store.createQuest(QuestDraft(title = "Root"))
+        store.pinToTop(root)
+        store.pinToTop(root)
+        assertEquals(-1, state().quests.getValue(root).manualOrder, "re-pinning the only pin keeps its place")
+
+        // The root group's pin at -1 says nothing about the child's group.
+        store.pinToTop(child)
+        assertEquals(-1, state().quests.getValue(child).manualOrder)
+        store.pinToBottom(parent)
+        assertEquals(1, state().quests.getValue(parent).manualOrder)
+
+        // A child whose parent has not synced in yet shows among the roots, so
+        // it pins among them too.
+        val orphan = store.createQuest(QuestDraft(title = "Orphan", parentId = "q-not-here-yet"))
+        store.pinToTop(orphan)
+        assertEquals(-2, state().quests.getValue(orphan).manualOrder)
+    }
+
+    @Test
+    fun `new pins land beyond the anchor whatever older moves left behind`() {
+        // Values as a 0.4 "move to top" (0) and "move to bottom" (5) wrote them.
+        val legacyTop = store.createQuest(QuestDraft(title = "legacy top"))
+        val legacyBottom = store.createQuest(QuestDraft(title = "legacy bottom"))
+        val fresh = store.createQuest(QuestDraft(title = "fresh"))
+        store.changeQuest(legacyTop, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, 0))
+        store.changeQuest(legacyBottom, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, 5))
+
+        store.pinToTop(fresh)
+        assertEquals(-1, state().quests.getValue(fresh).manualOrder, "above the legacy top pin at 0")
+        assertEquals(listOf(fresh, legacyTop, legacyBottom), visibleInPriorityOrder())
+
+        // Crossing over: a top pin pinned to the bottom goes below every sibling.
+        store.pinToBottom(fresh)
+        assertEquals(6, state().quests.getValue(fresh).manualOrder)
+        assertEquals(listOf(legacyTop, legacyBottom, fresh), visibleInPriorityOrder())
+
+        // Only bottom pins left among the others: a top pin still starts at -1,
+        // never at a positive value that would read as the bottom.
+        store.clearPin(legacyTop)
+        store.pinToTop(legacyTop)
+        assertEquals(-1, state().quests.getValue(legacyTop).manualOrder)
+    }
+
+    @Test
+    fun `a pin and its clearing round-trip through the log`() {
+        val id = store.createQuest(QuestDraft(title = "x"))
+        val log = vault.logFile(device.id)
+        assertFalse(
+            java.nio.file.Files.readString(log).contains(QuestFields.MANUAL_ORDER),
+            "a new quest writes no creation order",
+        )
+
+        store.pinToBottom(id)
+        assertEquals(1, newStore().state.value.quests.getValue(id).manualOrder)
+
+        store.clearPin(id)
+        assertNull(state().quests.getValue(id).manualOrder)
+        assertTrue(
+            java.nio.file.Files.readAllLines(log).last().contains("\"${QuestFields.MANUAL_ORDER}\":null"),
+            "clearing is an explicit null on the wire",
+        )
+        assertNull(newStore().state.value.quests.getValue(id).manualOrder, "the clear survives a replay")
+
+        // Clearing what is not pinned writes nothing.
+        val before = java.nio.file.Files.size(log)
+        store.clearPin(id)
+        assertEquals(before, java.nio.file.Files.size(log))
+    }
+
+    @Test
+    fun `the next occurrence of a pinned repeating quest keeps the pin`() {
+        val id = store.createQuest(
+            QuestDraft(title = "Morning pages", dueDate = LocalDate.of(2026, 10, 15), repetition = Repetition(RepeatUnit.DAY, 1)),
+        )
+        store.pinToTop(id)
+        store.completeQuest(id)
+
+        val next = state().quests.values.single { it.isOpen }
+        assertEquals(-1, next.manualOrder)
+        assertEquals(-1, newStore().state.value.quests.getValue(next.id).manualOrder)
+    }
+
+    private fun visibleInPriorityOrder(): List<String> =
+        cl.nheox.quests.domain.Sorting.sort(
+            state().openQuests,
+            cl.nheox.quests.domain.SortOrder(cl.nheox.quests.domain.SortKey.PRIORITY, cl.nheox.quests.domain.SortDirection.DESCENDING),
+            clock = clock,
+        ).map { it.id }
 
     @Test
     fun `bulk operations apply to every selected quest`() {

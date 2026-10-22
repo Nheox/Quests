@@ -65,6 +65,7 @@ public enum class Glyph {
     COMMAND,
     UNDO,
     WEIGHT,
+    PIN,
 }
 
 @Composable
@@ -392,6 +393,14 @@ public fun DrawScope.drawGlyph(glyph: Glyph, tint: Color) {
             line(6f, 7f, 6f, 17f)
             line(18f, 7f, 18f, 17f)
             line(6f, 12f, 18f, 12f)
+        }
+
+        // A pushpin: cap, tapering body, needle. Marks a quest the user has
+        // lifted out of the automatic order.
+        Glyph.PIN -> {
+            line(8.5f, 3.5f, 15.5f, 3.5f)
+            polyline(10f, 3.5f, 10f, 9f, 7f, 13.5f, 17f, 13.5f, 14f, 9f, 14f, 3.5f)
+            line(12f, 13.5f, 12f, 20.5f)
         }
     }
 }

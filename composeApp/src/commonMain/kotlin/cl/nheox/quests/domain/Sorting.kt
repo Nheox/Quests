@@ -11,15 +11,26 @@ public object Sorting {
      * [SortKey.RANDOM] takes an explicit seed so that a random ordering stays
      * stable while the user looks at it — a list that reshuffles under the
      * cursor on every recomposition is unusable.
+     *
+     * [SortKey.PRIORITY] reads [clock], because overdue and age are questions
+     * about now; no other key does. Descending is its natural reading, highest
+     * first with top pins above and bottom pins below; ascending mirrors the
+     * whole list, pins and tie-breaks included, so it reads as exactly the same
+     * list upside down.
      */
     public fun sort(
         quests: List<Quest>,
         order: SortOrder,
         skills: Map<String, Skill> = emptyMap(),
         randomSeed: Long = 0L,
+        clock: Clock = Clock.System,
     ): List<Quest> {
         if (order.key == SortKey.RANDOM) {
             return quests.shuffled(Random(randomSeed))
+        }
+        if (order.key == SortKey.PRIORITY) {
+            val ranked = Priority.order(quests, clock)
+            return if (order.direction == SortDirection.DESCENDING) ranked else ranked.asReversed()
         }
         val comparator = comparatorFor(order.key, skills)
         val directed = if (order.direction == SortDirection.ASCENDING) comparator else comparator.reversed()
@@ -29,7 +40,10 @@ public object Sorting {
     }
 
     private fun comparatorFor(key: SortKey, skills: Map<String, Skill>): Comparator<Quest> = when (key) {
-        SortKey.MANUAL -> compareBy { it.manualOrder }
+        // Top pins, then every unpinned quest at the anchor, then bottom pins.
+        // Unlike PRIORITY this ignores the score, so the unpinned middle falls
+        // to the title tie-break.
+        SortKey.MANUAL -> compareBy({ it.pin }, { it.manualOrder ?: 0 })
         SortKey.NAME -> compareBy { it.title.lowercase() }
         SortKey.CREATED -> compareBy { it.createdAt }
         SortKey.UPDATED -> compareBy { it.updatedAt }
@@ -49,7 +63,9 @@ public object Sorting {
 
         SortKey.LAST_WORKED -> compareBy(nullsLast()) { it.lastWorkedAt }
         SortKey.COMPLETED -> compareBy(nullsLast()) { it.completedAt }
-        SortKey.RANDOM -> compareBy { it.id }
+        // Both are answered in sort() before a comparator is needed; listed so
+        // this stays exhaustive.
+        SortKey.PRIORITY, SortKey.RANDOM -> compareBy { it.id }
     }
 
     private fun <T : Comparable<T>> nullsLast(): Comparator<T?> = Comparator { a, b ->

@@ -93,8 +93,16 @@ public data class QuestsState(
 
     public fun skill(id: String?): Skill? = id?.let { skills[it] }
 
+    /**
+     * A quest's direct children, in creation order.
+     *
+     * Creation order because it needs no clock: this is what delete, export and
+     * counts walk, and none of them should depend on the time of day. Anything
+     * that *presents* siblings orders them with
+     * [cl.nheox.quests.domain.Priority.order], as the Plan tree does.
+     */
     public fun children(parentId: String): List<Quest> =
-        quests.values.filter { it.parentId == parentId }.sortedBy { it.manualOrder }
+        quests.values.filter { it.parentId == parentId }.sortedWith(compareBy({ it.createdAt }, { it.id }))
 
     public fun roots(): List<Quest> =
         quests.values.filter { it.parentId == null || it.parentId !in quests }

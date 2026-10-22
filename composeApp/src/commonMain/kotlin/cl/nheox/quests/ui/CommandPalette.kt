@@ -110,9 +110,12 @@ public fun commands(
         out += Command(text.actionPromote, Glyph.ARROW_UP, "P", text.sectionQuests) {
             app.store.promoteToTopLevel(selected)
         }
-        out += Command(text.actionMoveToTop, Glyph.ARROW_UP, "[", text.sectionQuests) { app.store.moveToTop(selected) }
-        out += Command(text.actionMoveToBottom, Glyph.ARROW_DOWN, "]", text.sectionQuests) {
-            app.store.moveToBottom(selected)
+        out += Command(text.actionPinToTop, Glyph.ARROW_UP, "[", text.sectionQuests) { app.store.pinToTop(selected) }
+        out += Command(text.actionPinToBottom, Glyph.ARROW_DOWN, "]", text.sectionQuests) {
+            app.store.pinToBottom(selected)
+        }
+        if (state.quests[selected]?.manualOrder != null) {
+            out += Command(text.actionClearPin, Glyph.PIN, "\\", text.sectionQuests) { app.store.clearPin(selected) }
         }
         out += Command(text.actionShareAsText, Glyph.COPY, "S", text.sectionQuests) {
             actions.copyQuestAsText(selected)

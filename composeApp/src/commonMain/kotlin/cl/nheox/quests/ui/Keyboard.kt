@@ -236,12 +236,17 @@ public object Shortcuts {
             }
 
             Key.LeftBracket -> {
-                selected?.let { app.store.moveToTop(it) }
+                selected?.let { app.store.pinToTop(it) }
                 selected != null
             }
 
             Key.RightBracket -> {
-                selected?.let { app.store.moveToBottom(it) }
+                selected?.let { app.store.pinToBottom(it) }
+                selected != null
+            }
+
+            Key.Backslash -> {
+                selected?.let { app.store.clearPin(it) }
                 selected != null
             }
 
@@ -303,7 +308,8 @@ public object Shortcuts {
         "W" to "Due in a week (Shift+W in a month)",
         "0" to "Clear the due date",
         "P" to "Promote to top level",
-        "[  ]" to "Move to top, move to bottom",
+        "[  ]" to "Pin to the top or bottom of the list",
+        "\\" to "Clear the pin, back to automatic order",
         "R" to "Pick a random open quest",
         "A" to "Ask what to do now",
         "S" to "Copy the quest as text",

@@ -14,7 +14,15 @@ public enum class QuestView {
     NO_DUE_DATE,
 }
 
+/**
+ * What a list can be sorted by (§7.1).
+ *
+ * Never persisted — the sort is per-session UI state — so the declaration
+ * order is free to be the menu's order, and [PRIORITY], the default, leads.
+ * Should a sort ever be saved, save it by name.
+ */
 public enum class SortKey {
+    PRIORITY,
     MANUAL,
     NAME,
     CREATED,
@@ -91,11 +99,25 @@ public object Views {
     /** Views that read as a tree rather than a flat list. */
     public fun isTree(view: QuestView): Boolean = view == QuestView.PLAN
 
+    /**
+     * The order a view opens in.
+     *
+     * Every list of open quests orders itself by priority (§3, §5.6): the user
+     * rates a quest once and the app decides what rises. The history views
+     * answer a different question — what happened, most recent first — so
+     * they keep a date order.
+     */
     public fun defaultSort(view: QuestView): SortOrder = when (view) {
-        QuestView.TODAY, QuestView.OVERDUE -> SortOrder(SortKey.URGENCY, SortDirection.DESCENDING)
-        QuestView.TOMORROW, QuestView.NEXT -> SortOrder(SortKey.DUE_DATE, SortDirection.ASCENDING)
+        QuestView.TODAY,
+        QuestView.TOMORROW,
+        QuestView.OVERDUE,
+        QuestView.NEXT,
+        QuestView.PLAN,
+        QuestView.ALL,
+        QuestView.NO_DUE_DATE,
+        -> SortOrder(SortKey.PRIORITY, SortDirection.DESCENDING)
+
         QuestView.COMPLETED, QuestView.LAST_SEVEN_DAYS -> SortOrder(SortKey.COMPLETED, SortDirection.DESCENDING)
         QuestView.FAILED -> SortOrder(SortKey.UPDATED, SortDirection.DESCENDING)
-        else -> SortOrder(SortKey.MANUAL, SortDirection.ASCENDING)
     }
 }

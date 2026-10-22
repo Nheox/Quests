@@ -23,7 +23,11 @@ public data class Quest(
     val repetition: Repetition? = null,
     val reminders: List<Reminder> = emptyList(),
     val parentId: String? = null,
-    val manualOrder: Int = 0,
+    /**
+     * A pin within the sibling group, or null — the usual case — for a quest
+     * the automatic order places by score. See [Pin] for how values read.
+     */
+    val manualOrder: Int? = null,
     val state: QuestState = QuestState.OPEN,
     val skillIds: Set<String> = emptySet(),
     val createdAt: IsoInstant,
@@ -41,6 +45,7 @@ public data class Quest(
     public val isFailed: Boolean get() = state == QuestState.FAILED
     public val hasDue: Boolean get() = dueDate != null
     public val isRepeating: Boolean get() = repetition != null
+    public val pin: Pin get() = Pin.of(manualOrder)
 
     /** What this quest *would* pay if completed now, under the current balance. */
     public fun projectedXp(): Int = Balance.xp(difficulty, fear, estimatedMinutes)

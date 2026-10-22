@@ -57,6 +57,13 @@ public sealed class Event {
         val repetition: Repetition? = null,
         val reminders: List<Reminder> = emptyList(),
         val parentId: String? = null,
+        /**
+         * Legacy. Before 0.5 this was creation order, not a pin, and the
+         * projection ignores it: a quest starts unpinned and only an explicit
+         * `manualOrder` patch pins it. Kept so older lines keep their shape on
+         * disk and through compaction; new quests leave it at the default,
+         * which is not written.
+         */
         val manualOrder: Int = 0,
         val skillIds: Set<String> = emptySet(),
         /** Added in 0.5; absent from older lines, which then simply have none. */

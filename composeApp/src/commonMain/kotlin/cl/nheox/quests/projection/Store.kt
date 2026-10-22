@@ -143,7 +143,8 @@ public class QuestStore(
     public fun createQuest(draft: QuestDraft): String {
         val now = clock.now()
         val id = Ids.quest(now.toEpochMilli(), idRandom)
-        val order = nextManualOrder(draft.parentId)
+        // No manualOrder: a new quest joins the automatic order, and only an
+        // explicit pin takes it out of it.
         emit(
             Event.QuestCreated(
                 ts = now,
@@ -161,7 +162,6 @@ public class QuestStore(
                 repetition = draft.repetition,
                 reminders = draft.reminders,
                 parentId = draft.parentId,
-                manualOrder = order,
                 skillIds = draft.skillIds,
                 rewardBonus = draft.rewardBonus,
             ),
@@ -217,10 +217,21 @@ public class QuestStore(
                 repetition = repetition,
                 reminders = quest.reminders,
                 parentId = quest.parentId,
-                manualOrder = quest.manualOrder,
                 skillIds = quest.skillIds,
                 rewardBonus = quest.rewardBonus,
             )
+            // A pin is a statement about this chore, not about one occurrence
+            // of it, so the next one keeps its place. It travels as a patch
+            // because QuestCreated.manualOrder is legacy and never read.
+            quest.manualOrder?.let { pin ->
+                events += Event.QuestChanged(
+                    now,
+                    stamp(),
+                    device.id,
+                    nextId,
+                    FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, pin).build(),
+                )
+            }
         }
 
         events += Event.QuestCompleted(
@@ -328,18 +339,31 @@ public class QuestStore(
 
     public fun promoteToTopLevel(id: String): Unit = reparent(id, null)
 
-    public fun moveToTop(id: String) {
+    /**
+     * Pins a quest above the automatic order of its sibling group, and above
+     * any quest already pinned there.
+     *
+     * `min(0, lowest sibling pin) - 1`: the automatic block is anchored at 0,
+     * so a top pin is always negative, and the newest one is the topmost.
+     */
+    public fun pinToTop(id: String) {
         val quest = _state.value.quests[id] ?: return
-        val siblings = siblingsOf(quest)
-        val lowest = siblings.minOfOrNull { it.manualOrder } ?: 0
-        changeQuest(id, FieldPatch().set(QuestFields.MANUAL_ORDER, lowest - 1))
+        val lowest = siblingsOf(quest).mapNotNull { it.manualOrder }.minOrNull() ?: 0
+        changeQuest(id, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, minOf(0, lowest) - 1))
     }
 
-    public fun moveToBottom(id: String) {
+    /** The mirror of [pinToTop]: `max(0, highest sibling pin) + 1`, always positive. */
+    public fun pinToBottom(id: String) {
         val quest = _state.value.quests[id] ?: return
-        val siblings = siblingsOf(quest)
-        val highest = siblings.maxOfOrNull { it.manualOrder } ?: 0
-        changeQuest(id, FieldPatch().set(QuestFields.MANUAL_ORDER, highest + 1))
+        val highest = siblingsOf(quest).mapNotNull { it.manualOrder }.maxOrNull() ?: 0
+        changeQuest(id, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, maxOf(0, highest) + 1))
+    }
+
+    /** Returns a quest to the automatic order. An explicit null on the wire. */
+    public fun clearPin(id: String) {
+        val quest = _state.value.quests[id] ?: return
+        if (quest.manualOrder == null) return
+        changeQuest(id, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, null))
     }
 
     public fun setSkills(id: String, skillIds: Set<String>) {
@@ -603,13 +627,18 @@ public class QuestStore(
         onChanged?.invoke(next)
     }
 
-    private fun nextManualOrder(parentId: String?): Int {
-        val siblings = _state.value.quests.values.filter { it.parentId == parentId }
-        return (siblings.maxOfOrNull { it.manualOrder } ?: 0) + 1
+    /**
+     * The other quests in [quest]'s sibling group, grouped the way the Plan
+     * tree groups them: a quest whose parent is missing — a hand-edited log, or
+     * a child that synced in before its parent — sits among the roots, so it
+     * is pinned relative to them.
+     */
+    private fun siblingsOf(quest: Quest): List<Quest> {
+        val quests = _state.value.quests
+        fun groupOf(q: Quest): String? = q.parentId?.takeIf { it in quests }
+        val group = groupOf(quest)
+        return quests.values.filter { it.id != quest.id && groupOf(it) == group }
     }
-
-    private fun siblingsOf(quest: Quest): List<Quest> =
-        _state.value.quests.values.filter { it.parentId == quest.parentId }
 
     public companion object {
         /** Wires the whole stack up from a folder. */

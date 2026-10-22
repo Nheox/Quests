@@ -7,6 +7,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import java.nio.file.Path
 import java.time.Instant
@@ -73,6 +74,21 @@ class CompactionTest {
         assertEquals(1, result.droppedFields)
         val trimmed = result.kept[1] as Event.QuestChanged
         assertEquals(setOf(QuestFields.NOTES), trimmed.fields.keys)
+    }
+
+    @Test
+    fun `a cleared pin stays cleared through compaction`() {
+        // The clear is an explicit null and the last word on the field, so it
+        // is what survives; dropping it as "empty" would bring the pin back.
+        val events = listOf(
+            created("q1", 1),
+            changed("q1", 2, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, -1)),
+            changed("q1", 3, FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, null)),
+        )
+        val result = Compaction.compact(events)
+        assertEquals(1, result.droppedEvents)
+        assertNull(Projector.replay(result.kept).quests.getValue("q1").manualOrder)
+        assertEquals(Projector.replay(events).quests, Projector.replay(result.kept).quests)
     }
 
     @Test

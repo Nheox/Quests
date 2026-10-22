@@ -2,9 +2,11 @@ package cl.nheox.quests.projection
 
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.Pin
 import cl.nheox.quests.domain.QuestState
 import cl.nheox.quests.domain.Urgency
 import cl.nheox.quests.events.Event
+import cl.nheox.quests.events.EventCodec
 import cl.nheox.quests.events.FieldPatch
 import cl.nheox.quests.events.Hlc
 import cl.nheox.quests.events.QuestFields
@@ -162,6 +164,50 @@ class ReplayTest {
     }
 
     @Test
+    fun `legacy creation order is not read as a pin`() {
+        // Before 0.5 every QuestCreated carried its creation order here. It never
+        // meant "pinned", so a replayed quest starts in the automatic order.
+        val legacy = Event.QuestCreated(
+            ts = at(0), hlc = clock(0), device = "a", id = "q1", title = "Old", manualOrder = 3,
+        )
+        assertNull(Projector.replay(listOf(legacy)).quests.getValue("q1").manualOrder)
+
+        // The same, from a line exactly as 0.4 wrote it: no rewardBonus key at
+        // all, and the old order field present.
+        val line = """{"type":"QuestCreated","ts":"2026-10-01T09:00:00Z","hlc":"${clock(0)}",""" +
+            """"device":"a","id":"q2","title":"Older","manualOrder":7}"""
+        val quest = Projector.replay(listOf(EventCodec.decode(line))).quests.getValue("q2")
+        assertNull(quest.manualOrder)
+        assertNull(quest.rewardBonus)
+        assertEquals("Older", quest.title)
+    }
+
+    @Test
+    fun `manual order patches pin either side of the automatic block, and null clears`() {
+        data class Case(val value: Int?, val expected: Pin)
+
+        // Old "move to top" and "move to bottom" patches replay with the same
+        // meaning: at or below the anchor is a top pin, above it a bottom pin.
+        val cases = listOf(
+            Case(-3, Pin.TOP),
+            Case(0, Pin.TOP),
+            Case(1, Pin.BOTTOM),
+            Case(12, Pin.BOTTOM),
+            Case(null, Pin.NONE),
+        )
+        cases.forEach { case ->
+            val events = listOf(
+                created("q1", 0),
+                changed("q1", 10, patch = FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, 5)),
+                changed("q1", 20, patch = FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, case.value)),
+            )
+            val quest = Projector.replay(events).quests.getValue("q1")
+            assertEquals(case.value, quest.manualOrder, "patch ${case.value}")
+            assertEquals(case.expected, quest.pin, "patch ${case.value}")
+        }
+    }
+
+    @Test
     fun `a tombstone beats a late-arriving creation`() {
         // An old log syncing in must not resurrect a deleted quest.
         val events = listOf(
@@ -300,6 +346,10 @@ class ReplayTest {
         changed("q1", 11, node = "macbook", patch = FieldPatch().setEnum(QuestFields.FEAR, Fear.STRONG)),
         changed("q1", 12, node = "ubuntu", patch = FieldPatch().set(QuestFields.TITLE, "Write the methods section")),
         changed("q2", 13, node = "macbook", patch = FieldPatch().set(QuestFields.ESTIMATED_MINUTES, 180)),
+        changed("q1", 14, node = "macbook", patch = FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, -1)),
+        changed("q2", 15, node = "ubuntu", patch = FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, 2)),
+        changed("q1", 16, node = "ubuntu", patch = FieldPatch().setIntOrNull(QuestFields.MANUAL_ORDER, null)),
+        changed("q2", 17, node = "macbook", patch = FieldPatch().setIntOrNull(QuestFields.REWARD_BONUS, 4)),
         Event.QuestCompleted(
             at(20), clock(20, node = "macbook"), "macbook", "q3", at(20),
             xp = 15, points = 2, skillXp = emptyMap(),

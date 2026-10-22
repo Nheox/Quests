@@ -4,6 +4,7 @@ import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.DueBucket
 import cl.nheox.quests.domain.EnergyBand
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.PriorityBreakdown
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.SortKey
@@ -53,8 +54,9 @@ public interface Strings {
     public val actionFail: String
     public val actionReopen: String
     public val actionMarkWorked: String
-    public val actionMoveToTop: String
-    public val actionMoveToBottom: String
+    public val actionPinToTop: String
+    public val actionPinToBottom: String
+    public val actionClearPin: String
     public val actionPromote: String
     public val actionAddSubQuest: String
     public val actionSearch: String
@@ -228,6 +230,9 @@ public interface Strings {
     public val inventoryEmpty: String
     public val questsEmpty: String
     public val balanceNote: String
+    public val pinnedToTop: String
+    public val pinnedToBottom: String
+    public val priorityAutomatic: String
     public val messageCaptureUnavailable: String
 
     public fun xpAmount(amount: Int): String
@@ -246,6 +251,9 @@ public interface Strings {
     public fun compactedSummary(events: Int, fields: Int): String
     public fun streakDays(days: Int): String
     public fun percent(value: Float): String
+
+    /** "Priority 9.4 — urgency 4 · due 5 · fear 0.4 · age 0", for the detail pane. */
+    public fun priorityBreakdown(breakdown: PriorityBreakdown): String
 
     public fun difficulty(value: Difficulty): String
     public fun fear(value: Fear): String

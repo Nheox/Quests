@@ -99,10 +99,13 @@ public fun QuestListScreen(
         }
 
         // Today's filter is "due today or earlier", so it genuinely contains two
-        // kinds of thing and the buckets earn their headers. A random sort is the
-        // one case where grouping would fight the point of the sort.
+        // kinds of thing and the buckets earn their headers under a plain sort.
+        // Priority and random are the two sorts grouping would fight: priority
+        // already weighs how late a quest is against everything else and places
+        // pins at the very top and bottom, and the screen must show the same
+        // sequence the arrow keys walk.
         val grouped = view in setOf(QuestView.TODAY, QuestView.OVERDUE, QuestView.ALL) &&
-            app.sort.key != SortKey.RANDOM
+            app.sort.key != SortKey.RANDOM && app.sort.key != SortKey.PRIORITY
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = Space.sm),

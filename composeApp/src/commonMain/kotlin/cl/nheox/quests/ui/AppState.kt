@@ -166,7 +166,7 @@ public class AppState(
         } else {
             Views.filter(view, state.quests.values, clock)
         }
-        return Sorting.sort(pool, sort, state.skills, randomSeed)
+        return Sorting.sort(pool, sort, state.skills, randomSeed, clock)
     }
 
     /** All terms must match somewhere, which is what people expect of a search box. */

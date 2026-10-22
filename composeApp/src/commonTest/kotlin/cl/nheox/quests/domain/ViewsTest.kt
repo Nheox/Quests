@@ -103,7 +103,22 @@ class ViewsTest {
             // Exhaustive, so adding a view cannot leave it with no ordering.
             Views.defaultSort(view)
         }
-        assertEquals(SortKey.URGENCY, Views.defaultSort(QuestView.TODAY).key)
-        assertEquals(SortKey.DUE_DATE, Views.defaultSort(QuestView.NEXT).key)
+        // Every open list orders itself (§5.6), highest first; history views
+        // keep their date order.
+        val open = listOf(
+            QuestView.TODAY,
+            QuestView.TOMORROW,
+            QuestView.OVERDUE,
+            QuestView.NEXT,
+            QuestView.PLAN,
+            QuestView.ALL,
+            QuestView.NO_DUE_DATE,
+        )
+        open.forEach { view ->
+            assertEquals(SortOrder(SortKey.PRIORITY, SortDirection.DESCENDING), Views.defaultSort(view), "$view")
+        }
+        assertEquals(SortOrder(SortKey.COMPLETED, SortDirection.DESCENDING), Views.defaultSort(QuestView.COMPLETED))
+        assertEquals(SortOrder(SortKey.COMPLETED, SortDirection.DESCENDING), Views.defaultSort(QuestView.LAST_SEVEN_DAYS))
+        assertEquals(SortOrder(SortKey.UPDATED, SortDirection.DESCENDING), Views.defaultSort(QuestView.FAILED))
     }
 }

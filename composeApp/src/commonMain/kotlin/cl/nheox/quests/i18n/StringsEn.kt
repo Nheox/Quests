@@ -4,6 +4,7 @@ import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.DueBucket
 import cl.nheox.quests.domain.EnergyBand
 import cl.nheox.quests.domain.Fear
+import cl.nheox.quests.domain.PriorityBreakdown
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.SortKey
@@ -42,8 +43,9 @@ public object StringsEn : Strings {
     override val actionFail: String = "Fail"
     override val actionReopen: String = "Reopen"
     override val actionMarkWorked: String = "Mark as worked on"
-    override val actionMoveToTop: String = "Move to top"
-    override val actionMoveToBottom: String = "Move to bottom"
+    override val actionPinToTop: String = "Pin to top"
+    override val actionPinToBottom: String = "Pin to bottom"
+    override val actionClearPin: String = "Clear pin"
     override val actionPromote: String = "Promote to top level"
     override val actionAddSubQuest: String = "Add sub-quest"
     override val actionSearch: String = "Search"
@@ -217,6 +219,9 @@ public object StringsEn : Strings {
     override val inventoryEmpty: String = "Nothing in the inventory."
     override val questsEmpty: String = "No quests yet. Press N to add one."
     override val balanceNote: String = "XP excludes urgency on purpose: paying more for urgent work rewards leaving things until they are urgent."
+    override val pinnedToTop: String = "Pinned to top"
+    override val pinnedToBottom: String = "Pinned to bottom"
+    override val priorityAutomatic: String = "Placed by priority"
     override val messageCaptureUnavailable: String = "Global quick capture is unavailable on this system; the app itself is unaffected."
 
     override fun xpAmount(amount: Int): String = "$amount XP"
@@ -250,6 +255,14 @@ public object StringsEn : Strings {
     override fun streakDays(days: Int): String = if (days == 1) "1 day" else "$days days"
 
     override fun percent(value: Float): String = "${(value * 100).toInt()}%"
+
+    override fun priorityBreakdown(breakdown: PriorityBreakdown): String =
+        "Priority ${score(breakdown.total)} — urgency ${score(breakdown.urgency)} · due ${score(breakdown.due)} · " +
+            "fear ${score(breakdown.fear)} · age ${score(breakdown.age)}"
+
+    /** Up to two decimals and no trailing zeros: "4", "0.4", "0.35". */
+    private fun score(value: Double): String =
+        java.math.BigDecimal.valueOf(value).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
 
     override fun difficulty(value: Difficulty): String = when (value) {
         Difficulty.TRIVIAL -> "Trivial"
@@ -308,6 +321,7 @@ public object StringsEn : Strings {
     }
 
     override fun sortKey(value: SortKey): String = when (value) {
+        SortKey.PRIORITY -> "Priority"
         SortKey.MANUAL -> "Manual order"
         SortKey.NAME -> "Name"
         SortKey.CREATED -> "Created"
