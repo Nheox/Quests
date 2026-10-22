@@ -124,7 +124,7 @@ internal val QUICK_ADD_SYNTAX: List<Pair<String, String>> = listOf(
     "!  !!" to "urgency: high, critical",
     "d:high  f:strong  u:low" to "the same three, spelled out",
     "~2h  ~90m  ~1h30m  ~45" to "estimated duration",
-    "today  tomorrow  mon…sun" to "due date, English or Spanish",
+    "today  tomorrow  mon…sun" to "due date",
     "next week  +3d  +2w" to "relative due date",
     "2026-10-20  20/10" to "absolute due date, day first",
     "3pm  15:00  at 9:30am" to "due time; implies today if no date given",

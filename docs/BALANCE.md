@@ -82,15 +82,16 @@ total itself.
 
 ## Energy
 
+- **Auto** (the default): `20 + 80 × (1 − t)^1.25`, where `t` is the fraction
+  of the day elapsed between the wake-up time and bedtime — 100 at wake-up, 20 at
+  bedtime, on a gentle curve that falls faster late in the day than early.
+  Between bedtime and wake-up it sits at 5. (Stored as `SLEEP_SCHEDULE`, its
+  name in older logs.)
 - **Manual**: the user sets 0–100.
-- **Sleep schedule**: `20 + 80 × (1 − t)^1.25`, where `t` is the fraction of the
-  waking window elapsed — 100 at wake time, 20 at sleep time, on a gentle curve
-  that falls faster late in the day than early. During sleeping hours it sits at
-  5.
 
-A waking window that crosses midnight is handled, because plenty of people have
-one, and the suggester would otherwise be useless for exactly the people most
-likely to need it.
+A day that crosses midnight — a bedtime after 00:00, or a night shift — is
+handled, because plenty of people have one, and the suggester would otherwise
+be useless for exactly the people most likely to need it.
 
 Energy feeds the energy bar and the suggester, and nothing else.
 

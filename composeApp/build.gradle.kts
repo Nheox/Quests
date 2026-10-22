@@ -111,9 +111,10 @@ compose.desktop {
         mainClass = "cl.nheox.quests.MainKt"
 
         // A jpackage launcher inherits the platform encoding, which on a machine
-        // with a C locale is ASCII — enough to turn every accented character in
-        // the Spanish strings, and every em dash in `--help`, into a question
-        // mark. Pinning UTF-8 is cheaper than discovering that from a bug report.
+        // with a C locale is ASCII — enough to turn every em dash in the UI and
+        // in `--help`, and every accented character in a quest title, into a
+        // question mark. Pinning UTF-8 is cheaper than discovering that from a
+        // bug report.
         jvmArgs += listOf(
             "-Dfile.encoding=UTF-8",
             "-Dsun.stdout.encoding=UTF-8",

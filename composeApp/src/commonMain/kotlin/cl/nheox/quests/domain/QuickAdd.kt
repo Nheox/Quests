@@ -33,7 +33,9 @@ public data class QuickAddResult(
  * are multi-word ("next week", "every 2 weeks", "a las 3pm"). Each pass removes
  * what it matched; whatever survives is the title.
  *
- * Keywords are accepted in English and Spanish, since both ship on day one.
+ * Keywords are accepted in Spanish as well as English. The interface is English
+ * only (§1), but input is not interface: a line typed as "llamar mañana" should
+ * still land on tomorrow, and recognising more words costs nothing.
  */
 public object QuickAdd {
     private val DIFFICULTY_WORDS: Map<String, Difficulty> = mapOf(

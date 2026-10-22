@@ -85,22 +85,29 @@ public enum class QuestState {
     FAILED,
 }
 
-/** How the energy bar is driven. Energy never changes XP (see docs/BALANCE.md). */
+/**
+ * How the energy bar is driven. Energy never changes XP (see docs/BALANCE.md).
+ *
+ * The constant names are what the log stores, so they stay as written even
+ * where the interface calls the mode something else: [SLEEP_SCHEDULE] is shown
+ * as "Auto".
+ */
 @Serializable
 public enum class EnergyMode {
     MANUAL,
+
+    /** Drains from the wake-up time to bedtime. Shown as "Auto"; the default. */
     SLEEP_SCHEDULE,
 }
 
-/** UI language. English and Spanish from day one, structured for more later. */
+/**
+ * UI language. Only English ships (§1).
+ *
+ * [ES] remains only so that settings events written by earlier versions, which
+ * offered Spanish, still parse; it resolves to English like everything else.
+ */
 @Serializable
 public enum class Language {
     EN,
     ES,
-    ;
-
-    public companion object {
-        public fun fromTag(tag: String?): Language =
-            if (tag?.lowercase()?.startsWith("es") == true) ES else EN
-    }
 }

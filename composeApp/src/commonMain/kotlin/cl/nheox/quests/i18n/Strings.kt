@@ -15,9 +15,9 @@ import cl.nheox.quests.domain.Urgency
  *
  * An interface of named properties rather than a string table looked up by key,
  * because a missing key should be a compile error and not a blank label
- * discovered by a user. English and Spanish both ship from day one (§7.6), and
- * keeping them as two implementations of one interface means neither can
- * quietly fall behind the other.
+ * discovered by a user. Only English ships (§1), but the interface stays: a
+ * translation is then one new implementation that the compiler checks for
+ * completeness, not a hunt through every screen for hard-coded text.
  *
  * Every string here was written fresh for this app. Nothing is lifted from the
  * app that inspired it (§2).
@@ -143,9 +143,11 @@ public interface Strings {
     public val rewardPoints: String
     public val energy: String
     public val energyManual: String
-    public val energySleepSchedule: String
+    public val energyManualBody: String
+    public val energyAuto: String
+    public val energyAutoBody: String
     public val energyWakeTime: String
-    public val energySleepTime: String
+    public val energyBedtime: String
     public val energyHigh: String
     public val energyMedium: String
     public val energyLow: String
@@ -180,7 +182,6 @@ public interface Strings {
     public val settingsFolderBody: String
     public val settingsDevice: String
     public val settingsDeviceBody: String
-    public val settingsLanguage: String
     public val settingsSounds: String
     public val settingsFailureCosts: String
     public val settingsFailureCostsBody: String
@@ -255,8 +256,13 @@ public interface Strings {
 }
 
 public object Translations {
+    /**
+     * Every language resolves to English, including a stored
+     * [cl.nheox.quests.domain.Language.ES] from an older settings event. The
+     * lookup stays so a future translation slots in here without touching the
+     * call sites.
+     */
     public fun of(language: cl.nheox.quests.domain.Language): Strings = when (language) {
-        cl.nheox.quests.domain.Language.EN -> StringsEn
-        cl.nheox.quests.domain.Language.ES -> StringsEs
+        cl.nheox.quests.domain.Language.EN, cl.nheox.quests.domain.Language.ES -> StringsEn
     }
 }

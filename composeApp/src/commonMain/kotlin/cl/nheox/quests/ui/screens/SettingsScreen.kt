@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cl.nheox.quests.BuildInfo
 import cl.nheox.quests.domain.EnergyMode
-import cl.nheox.quests.domain.Language
 import cl.nheox.quests.events.FieldPatch
 import cl.nheox.quests.events.ProfileFields
 import cl.nheox.quests.events.SettingsFields
@@ -113,16 +112,27 @@ public fun SettingsScreen(
 
             SectionHeader(text.energy)
             SegmentedSelector(
-                options = EnergyMode.entries,
+                // Auto first: it is the default, and the mode that needs no
+                // attention once the two times are set.
+                options = listOf(EnergyMode.SLEEP_SCHEDULE, EnergyMode.MANUAL),
                 selected = profile.energyMode,
                 onSelect = { app.store.changeProfile(FieldPatch().setEnum(ProfileFields.ENERGY_MODE, it)) },
                 label = { mode ->
                     when (mode) {
-                        EnergyMode.MANUAL -> "manual"
-                        EnergyMode.SLEEP_SCHEDULE -> "schedule"
+                        EnergyMode.MANUAL -> text.energyManual
+                        EnergyMode.SLEEP_SCHEDULE -> text.energyAuto
                     }
                 },
                 compact = true,
+            )
+            Text(
+                when (profile.energyMode) {
+                    EnergyMode.MANUAL -> text.energyManualBody
+                    EnergyMode.SLEEP_SCHEDULE -> text.energyAutoBody
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = theme.textFaint,
+                modifier = Modifier.padding(top = Space.xs),
             )
             Spacer(Modifier.height(Space.sm))
             when (profile.energyMode) {
@@ -167,7 +177,7 @@ public fun SettingsScreen(
                         }
                         Column {
                             Text(
-                                text.energySleepTime,
+                                text.energyBedtime,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = theme.textFaint,
                             )
@@ -198,15 +208,6 @@ public fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = theme.textFaint,
                 modifier = Modifier.padding(top = Space.xs),
-            )
-
-            SectionHeader(text.settingsLanguage)
-            SegmentedSelector(
-                options = Language.entries,
-                selected = settings.language,
-                onSelect = { app.store.changeSettings(FieldPatch().setEnum(SettingsFields.LANGUAGE, it)) },
-                label = { if (it == Language.EN) "English" else "Español" },
-                compact = true,
             )
 
             SectionHeader(text.settingsReminders)

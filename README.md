@@ -120,7 +120,7 @@ write methods tomorrow 3pm #thesis !! ~2h
 | `!`, `!!` | urgency: high, critical |
 | `d:high` `f:strong` `u:low` | the same three, spelled out |
 | `~2h` `~90m` `~1h30m` `~45` | estimated duration |
-| `today` `tomorrow` `mon`…`sun` | due date (English or Spanish) |
+| `today` `tomorrow` `mon`…`sun` | due date |
 | `next week` `+3d` `+2w` | relative due date |
 | `2026-10-20` `20/10` | absolute due date, day first |
 | `3pm` `15:00` `at 9:30am` | due time |

@@ -474,9 +474,9 @@ private fun EditorActions(app: AppState, state: QuestsState, quest: Quest) {
             }
         }
         Spacer(Modifier.height(Space.xs))
-        // Wrapping, not a Row: these labels are translated, and in Spanish
-        // "Marcar como trabajada" is half again as long as the English. A fixed
-        // row clips the last button off the edge of the pane.
+        // Wrapping, not a Row: three labelled buttons already fill the pane, and
+        // a longer label — or a translation, should one arrive — would clip the
+        // last button off the edge in a fixed row.
         androidx.compose.foundation.layout.FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Space.xs),
             verticalArrangement = Arrangement.spacedBy(Space.xs),

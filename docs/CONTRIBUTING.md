@@ -45,9 +45,10 @@ both. Single-letter shortcuts must be suspended while `AppState.typing` is set.
 **Never call `theme` or `strings` inside a non-composable lambda.** Capture them
 at the top of the composable instead; the compiler error is unhelpful.
 
-**Strings go in `i18n/Strings.kt` with both implementations.** English and
-Spanish ship together, and an interface of named properties means a missing
-translation is a compile error rather than a blank label a user discovers.
+**Strings go in `i18n/Strings.kt` and `i18n/StringsEn.kt`.** Only English
+ships, but no user-facing text is written inline: an interface of named
+properties means a future translation's missing string is a compile error
+rather than a blank label a user discovers.
 
 ## Tests
 
@@ -78,6 +79,7 @@ rather than silent — see the notes in `BALANCE.md` on the level curve and in
 
 ## Translations
 
-`i18n/StringsEs.kt` is Chilean Spanish. Further languages are welcome; the
-structure is deliberately ready for Weblate but not yet wired to it. Keep the
+Quests ships in English only, to avoid a half-translated interface with one
+maintainer. The structure is still ready for a translation: one new
+implementation of `Strings`, returned from `Translations.of`. Keep the
 `Strings` interface as the single list of keys.

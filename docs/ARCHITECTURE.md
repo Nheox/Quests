@@ -27,7 +27,7 @@ composeApp/src/
                  device identity, compaction
     projection/  replay into in-memory state; the store (command surface)
     export/      iCalendar and Markdown generation
-    i18n/        Strings interface + English and Spanish implementations
+    i18n/        Strings interface + the English implementation
     ui/          design system, screens, command palette, keyboard map
   desktopMain/kotlin/cl/nheox/quests/
     Main.kt      entry point, CLI, windows, tray
@@ -118,7 +118,8 @@ palette, due dates, repetition, reminders, tray presence, `.ics` and Markdown
 export, hierarchy and the Plan tree, scratchpad with promotion, search, bulk
 operations, undo, reward points, rewards with escalating cost, inventory, stats,
 radar and trend charts, the fear log, the suggester, compaction, `.deb`
-packaging, and English and Spanish.
+packaging. The interface is English only; Spanish shipped in 0.4 and was
+dropped.
 
 Not built:
 
