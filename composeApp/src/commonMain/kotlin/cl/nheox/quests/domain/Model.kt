@@ -148,6 +148,12 @@ public data class Settings(
     val markdownExportEnabled: Boolean = true,
     val remindersEnabled: Boolean = true,
     val trayEnabled: Boolean = true,
+    /**
+     * Set by the first-run tour, which is gone: first run now asks one
+     * question, where the data lives (§1.2), and nothing reads this. It stays
+     * because older logs carry `onboardingComplete` settings events, and the
+     * compatibility rule is that a field a log may hold is never removed.
+     */
     val onboardingComplete: Boolean = false,
     val startInTray: Boolean = false,
 )

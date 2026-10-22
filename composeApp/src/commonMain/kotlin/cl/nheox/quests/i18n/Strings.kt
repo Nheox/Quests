@@ -84,8 +84,6 @@ public interface Strings {
     public val actionOpenFolder: String
     public val actionBack: String
     public val actionDone: String
-    public val actionSkip: String
-    public val actionNext: String
     public val actionPromoteNote: String
     public val fieldTitle: String
     public val fieldNotes: String
@@ -206,15 +204,6 @@ public interface Strings {
     public val settingsVersion: String
     public val settingsLicence: String
     public val settingsDanger: String
-    public val onboardingWelcome: String
-    public val onboardingBody: String
-    public val onboardingFearTitle: String
-    public val onboardingFearBody: String
-    public val onboardingFilesTitle: String
-    public val onboardingFilesBody: String
-    public val onboardingKeyboardTitle: String
-    public val onboardingKeyboardBody: String
-    public val onboardingStart: String
     public val helpTitle: String
     public val helpShortcuts: String
     public val helpQuickAdd: String

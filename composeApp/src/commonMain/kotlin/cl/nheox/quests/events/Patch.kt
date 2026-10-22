@@ -146,6 +146,7 @@ public object SettingsFields {
     public const val MARKDOWN_EXPORT_ENABLED: String = "markdownExportEnabled"
     public const val REMINDERS_ENABLED: String = "remindersEnabled"
     public const val TRAY_ENABLED: String = "trayEnabled"
+    /** Legacy, from the removed first-run tour: see [cl.nheox.quests.domain.Settings.onboardingComplete]. */
     public const val ONBOARDING_COMPLETE: String = "onboardingComplete"
     public const val START_IN_TRAY: String = "startInTray"
 }

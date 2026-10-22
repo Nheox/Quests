@@ -17,14 +17,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import cl.nheox.quests.domain.QuestView
-import cl.nheox.quests.events.FieldPatch
-import cl.nheox.quests.events.SettingsFields
 import cl.nheox.quests.i18n.Translations
 import cl.nheox.quests.ui.components.VLine
 import cl.nheox.quests.ui.screens.HelpScreen
 import cl.nheox.quests.ui.screens.InsightScreen
 import cl.nheox.quests.ui.screens.InventoryScreen
-import cl.nheox.quests.ui.screens.OnboardingOverlay
 import cl.nheox.quests.ui.screens.PlanScreen
 import cl.nheox.quests.ui.screens.QuestEditorPane
 import cl.nheox.quests.ui.screens.QuestListScreen
@@ -124,13 +121,6 @@ public fun QuestsApp(
                 null -> Unit
                 Overlay.CommandPalette -> CommandPaletteOverlay(app, state, actions)
                 Overlay.Suggester -> SuggesterOverlay(app, state)
-                Overlay.Onboarding -> OnboardingOverlay(
-                    onFinish = {
-                        app.store.changeSettings(FieldPatch().set(SettingsFields.ONBOARDING_COMPLETE, true))
-                        app.overlay = null
-                    },
-                )
-
                 is Overlay.Reschedule -> RescheduleOverlay(app, state, overlay.questIds)
                 is Overlay.SkillPicker -> SkillPickerOverlay(app, state, overlay.questIds)
                 is Overlay.ConfirmDelete -> ConfirmDeleteOverlay(app, state, overlay.questIds, overlay.title)
@@ -141,7 +131,6 @@ public fun QuestsApp(
         // keystroke is swallowed establishing focus instead of doing something.
         LaunchedEffect(Unit) {
             keyboardFocus.requestFocus()
-            if (!state.settings.onboardingComplete) app.overlay = Overlay.Onboarding
         }
 
         // Focus has to come *back* when an overlay closes. An overlay's text

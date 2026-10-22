@@ -38,8 +38,6 @@ public sealed interface Overlay {
 
     public data object Suggester : Overlay
 
-    public data object Onboarding : Overlay
-
     public data class Reschedule(val questIds: List<String>) : Overlay
 
     public data class SkillPicker(val questIds: List<String>) : Overlay
