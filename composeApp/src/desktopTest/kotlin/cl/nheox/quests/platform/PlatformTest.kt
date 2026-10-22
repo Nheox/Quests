@@ -172,4 +172,28 @@ class AppPathsTest {
     fun `the default vault is a plainly named folder in the home directory`() {
         assertEquals("Quests", AppPaths.defaultVault().fileName.toString())
     }
+
+    @Test
+    fun `the pending folder lives beside the pointer, in the config directory`() {
+        // Never in the data folder: which folder this machine uses is this
+        // machine's business, and must not sync.
+        assertEquals(AppPaths.configDir(), AppPaths.pendingVaultFile().parent)
+        assertTrue(AppPaths.pendingVaultFile() != AppPaths.vaultPointerFile())
+    }
+
+    @Test
+    fun `paths under home are shown with a tilde`() {
+        data class Case(val path: String, val expected: String)
+
+        val home = Path.of("/home/ana")
+        listOf(
+            Case("/home/ana/Quests", "~/Quests"),
+            Case("/home/ana/Dropbox/Shared Quests", "~/Dropbox/Shared Quests"),
+            Case("/home/ana", "~"),
+            Case("/home/ana/./Quests/../Quests", "~/Quests"),
+            // A sibling that merely starts with the same letters is not home.
+            Case("/home/anabel/Quests", "/home/anabel/Quests"),
+            Case("/Volumes/Backup/Quests", "/Volumes/Backup/Quests"),
+        ).forEach { case -> assertEquals(case.expected, AppPaths.displayPath(Path.of(case.path), home), case.path) }
+    }
 }

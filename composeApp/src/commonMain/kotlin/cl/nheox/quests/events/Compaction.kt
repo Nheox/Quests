@@ -31,6 +31,15 @@ public object Snapshots {
         }
     }
 
+    /**
+     * This device's own snapshots, the only ones it may copy or rewrite.
+     *
+     * Matched on the parsed name rather than a prefix, so `mac` does not claim
+     * `mac-mini-00001.json`.
+     */
+    public fun listOwn(vault: Vault, device: String): List<Path> =
+        list(vault).filter { fileName.matchEntire(it.name)?.groupValues?.get(1) == device }
+
     public fun read(file: Path): Snapshot? = runCatching {
         EventCodec.json.decodeFromString(Snapshot.serializer(), file.readText())
     }.getOrNull()

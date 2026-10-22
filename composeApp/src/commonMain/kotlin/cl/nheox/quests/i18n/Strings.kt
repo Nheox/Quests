@@ -204,6 +204,21 @@ public interface Strings {
     public val settingsVersion: String
     public val settingsLicence: String
     public val settingsDanger: String
+    public val firstRunTitle: String
+    public val firstRunBody: String
+    public val firstRunChoose: String
+    public val firstRunUseFolder: String
+    public val firstRunCreateFolder: String
+    public val firstRunNewFolder: String
+    public val firstRunEmptyFolder: String
+    public val firstRunOtherFiles: String
+    public val firstRunPreviousUnavailable: String
+    public val firstRunCannotCreate: String
+    public val firstRunCannotOpen: String
+    public val folderChooserTitle: String
+    public val folderNotAFolder: String
+    public val folderNotWritable: String
+    public val folderAlreadyInUse: String
     public val helpTitle: String
     public val helpShortcuts: String
     public val helpQuickAdd: String
@@ -240,6 +255,22 @@ public interface Strings {
     public fun compactedSummary(events: Int, fields: Int): String
     public fun streakDays(days: Int): String
     public fun percent(value: Float): String
+
+    /** "Use ~/Quests", the first-run button when the offered folder exists. */
+    public fun firstRunUse(path: String): String
+
+    /** "Create ~/Quests", the first-run button when it does not. */
+    public fun firstRunCreate(path: String): String
+
+    /** "Existing quests found — 2 devices": one log per device in the folder. */
+    public fun firstRunExisting(devices: Int): String
+
+    public fun folderCannotRemember(configDir: String): String
+    public fun folderSwitchScheduled(path: String): String
+    public fun folderSwitchPending(path: String): String
+    public fun folderSwitched(path: String): String
+    public fun folderSwitchConflict(file: String): String
+    public fun folderSwitchFailed(path: String): String
 
     /** "Priority 9.4 — urgency 4 · due 5 · fear 0.4 · age 0", for the detail pane. */
     public fun priorityBreakdown(breakdown: PriorityBreakdown): String

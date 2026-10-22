@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import cl.nheox.quests.BuildInfo
 import cl.nheox.quests.domain.EnergyMode
@@ -89,8 +90,18 @@ public fun SettingsScreen(
             ) {
                 Text(
                     app.store.vaultRoot.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
+                    // Monospace is the point for a path (DESIGN §1): it is
+                    // read character by character.
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                     color = theme.textMuted,
+                )
+            }
+            app.pendingFolder?.let { pending ->
+                Text(
+                    text.folderSwitchPending(pending),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = theme.text,
+                    modifier = Modifier.padding(top = Space.xs),
                 )
             }
             Spacer(Modifier.height(Space.sm))

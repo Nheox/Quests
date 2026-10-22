@@ -71,7 +71,8 @@ Requires JDK 21.
 
 ## Your data
 
-Everything lives in `~/Quests` (changeable in Settings):
+Everything lives in one folder. The first launch asks where, offering `~/Quests`
+or a folder of your own; Settings can change it later:
 
 ```
 ~/Quests/

@@ -44,6 +44,27 @@ class StringsEnTest {
     }
 
     @Test
+    fun `a data-folder change says where, when, and that nothing was left behind`() {
+        val cases = listOf(
+            StringsEn.firstRunCreate("~/Quests") to "Create ~/Quests",
+            StringsEn.firstRunUse("~/Quests") to "Use ~/Quests",
+            StringsEn.firstRunExisting(1) to "Existing quests found — 1 device",
+            StringsEn.firstRunExisting(3) to "Existing quests found — 3 devices",
+            StringsEn.folderSwitchScheduled("~/Dropbox/Quests") to
+                "From the next launch Quests will use ~/Dropbox/Quests, with a copy of this device's log. " +
+                "The current folder is left untouched.",
+            StringsEn.folderSwitchPending("~/Dropbox/Quests") to "Switching to ~/Dropbox/Quests at the next launch.",
+            StringsEn.folderSwitched("~/Dropbox/Quests") to "Now using ~/Dropbox/Quests. The previous folder was left untouched.",
+            StringsEn.folderSwitchConflict("events-mac.jsonl") to
+                "Kept the current folder: the new one already holds a different events-mac.jsonl.",
+            StringsEn.folderSwitchFailed("~/Dropbox/Quests") to
+                "Kept the current folder: this device's files could not be copied to ~/Dropbox/Quests.",
+            StringsEn.folderCannotRemember("~/.config/quests") to "Quests couldn't save this choice in ~/.config/quests.",
+        )
+        cases.forEach { (actual, expected) -> assertEquals(expected, actual) }
+    }
+
+    @Test
     fun `no interface text speaks of sleep or waking hours`() {
         // Every plain string on the interface, read through its getter, so a
         // new label cannot slip the old wording back in unnoticed.

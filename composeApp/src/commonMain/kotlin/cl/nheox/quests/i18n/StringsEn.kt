@@ -193,6 +193,21 @@ public object StringsEn : Strings {
     override val settingsVersion: String = "Version"
     override val settingsLicence: String = "Licensed under the GNU General Public License v3."
     override val settingsDanger: String = "Maintenance"
+    override val firstRunTitle: String = "Where should your quests live?"
+    override val firstRunBody: String = "Everything is plain text in one folder. Put it inside Syncthing, Dropbox, OneDrive or iCloud Drive to share it between computers."
+    override val firstRunChoose: String = "Choose or create a folder…"
+    override val firstRunUseFolder: String = "Use this folder"
+    override val firstRunCreateFolder: String = "Create this folder"
+    override val firstRunNewFolder: String = "New folder — Quests will create it."
+    override val firstRunEmptyFolder: String = "Empty folder, ready to use."
+    override val firstRunOtherFiles: String = "Quests will keep its files beside what is already here."
+    override val firstRunPreviousUnavailable: String = "Quests couldn't open the folder it used last time. If it is on a drive, connect the drive, or choose another folder."
+    override val firstRunCannotCreate: String = "Quests couldn't create or write to that folder. Choose another one."
+    override val firstRunCannotOpen: String = "Quests couldn't read the quests in that folder. Choose another one."
+    override val folderChooserTitle: String = "Choose a folder for your quests"
+    override val folderNotAFolder: String = "That is a file, not a folder."
+    override val folderNotWritable: String = "Quests can't write to this folder."
+    override val folderAlreadyInUse: String = "That is already the data folder."
     override val helpTitle: String = "Help"
     override val helpShortcuts: String = "Keyboard shortcuts"
     override val helpQuickAdd: String = "Quick-add syntax"
@@ -244,6 +259,28 @@ public object StringsEn : Strings {
     override fun streakDays(days: Int): String = if (days == 1) "1 day" else "$days days"
 
     override fun percent(value: Float): String = "${(value * 100).toInt()}%"
+
+    override fun firstRunUse(path: String): String = "Use $path"
+
+    override fun firstRunCreate(path: String): String = "Create $path"
+
+    override fun firstRunExisting(devices: Int): String =
+        if (devices == 1) "Existing quests found — 1 device" else "Existing quests found — $devices devices"
+
+    override fun folderCannotRemember(configDir: String): String = "Quests couldn't save this choice in $configDir."
+
+    override fun folderSwitchScheduled(path: String): String =
+        "From the next launch Quests will use $path, with a copy of this device's log. The current folder is left untouched."
+
+    override fun folderSwitchPending(path: String): String = "Switching to $path at the next launch."
+
+    override fun folderSwitched(path: String): String = "Now using $path. The previous folder was left untouched."
+
+    override fun folderSwitchConflict(file: String): String =
+        "Kept the current folder: the new one already holds a different $file."
+
+    override fun folderSwitchFailed(path: String): String =
+        "Kept the current folder: this device's files could not be copied to $path."
 
     override fun priorityBreakdown(breakdown: PriorityBreakdown): String =
         "Priority ${score(breakdown.total)} — urgency ${score(breakdown.urgency)} · due ${score(breakdown.due)} · " +

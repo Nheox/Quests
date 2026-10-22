@@ -204,6 +204,23 @@ class CompactionTest {
         assertEquals(1, Snapshots.nextIndex(vault, "ubuntu"))
     }
 
+    @Test
+    fun `a device's own snapshots are told apart from a longer name that starts the same`() {
+        Snapshots.write(vault, Snapshot(device = "macbook", upToHlc = clock(1), events = emptyList()))
+        Snapshots.write(vault, Snapshot(device = "macbook", upToHlc = clock(2), events = emptyList()))
+        Snapshots.write(vault, Snapshot(device = "macbook-air", upToHlc = clock(3), events = emptyList()))
+
+        data class Case(val device: String, val expected: List<String>)
+        listOf(
+            Case("macbook", listOf("macbook-00001.json", "macbook-00002.json")),
+            Case("macbook-air", listOf("macbook-air-00001.json")),
+            Case("mac", emptyList()),
+            Case("ubuntu", emptyList()),
+        ).forEach { case ->
+            assertEquals(case.expected, Snapshots.listOwn(vault, case.device).map { it.fileName.toString() }, case.device)
+        }
+    }
+
     private fun busyHistory(): List<Event> = listOf(
         Event.SkillCreated(now, clock(1), "macbook", "s1", "Thesis"),
         created("q1", 2),

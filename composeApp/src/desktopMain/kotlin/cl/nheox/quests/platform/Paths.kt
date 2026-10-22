@@ -15,7 +15,8 @@ import java.nio.file.Paths
  *  - The **config** directory is this machine's, lives in the usual XDG place,
  *    and holds exactly two things: which folder the vault is, and what this
  *    device is called. Neither may ever be synced, because both are answers to
- *    "which computer am I".
+ *    "which computer am I". (A third file, the folder to switch to, exists
+ *    only between choosing a new folder in Settings and the next launch.)
  */
 public object AppPaths {
     public const val APP_DIR_NAME: String = "quests"
@@ -57,27 +58,64 @@ public object AppPaths {
 
     public fun vaultPointerFile(): Path = configDir().resolve("vault")
 
+    public fun pendingVaultFile(): Path = configDir().resolve("vault.next")
+
+    /** Offered on first run; never used without the user saying so. */
     public fun defaultVault(): Path = home.resolve(Vault.DEFAULT_FOLDER_NAME)
 
-    /** The folder the user picked, or `~/Quests` until they pick one. */
-    public fun resolveVault(): Path {
-        val pointer = vaultPointerFile()
-        if (Files.isRegularFile(pointer)) {
-            val stored = runCatching { Files.readString(pointer).trim() }.getOrNull()
-            if (!stored.isNullOrBlank()) {
-                val path = runCatching { Paths.get(stored) }.getOrNull()
-                if (path != null) return path
-            }
-        }
-        return defaultVault()
+    /**
+     * The folder the user picked, or null if they never have.
+     *
+     * There is deliberately no fallback to [defaultVault] here. A missing
+     * pointer means first run, and first run asks (§1.2): quietly creating
+     * `~/Quests` is how a user ends up with their quests in a folder they never
+     * chose and nothing syncing it.
+     */
+    public fun storedVault(): Path? = readPointer(vaultPointerFile())
+
+    /** Returns false if the choice could not be written down. */
+    public fun rememberVault(path: Path): Boolean = writePointer(vaultPointerFile(), path)
+
+    /**
+     * The folder chosen in Settings, which the next launch switches to.
+     *
+     * The switch waits for a launch because the copy has to wait for one:
+     * anything this session writes after the copy would otherwise stay behind
+     * in the old folder, missing from the new one.
+     */
+    public fun pendingVault(): Path? = readPointer(pendingVaultFile())
+
+    public fun rememberPendingVault(path: Path): Boolean = writePointer(pendingVaultFile(), path)
+
+    public fun clearPendingVault() {
+        runCatching { Files.deleteIfExists(pendingVaultFile()) }
     }
 
-    public fun rememberVault(path: Path) {
-        runCatching {
-            Files.createDirectories(configDir())
-            Files.writeString(vaultPointerFile(), path.toAbsolutePath().toString())
+    /** A path as a person reads it: `~/Quests` rather than `/home/ana/Quests`. */
+    public fun display(path: Path): String = displayPath(path, home)
+
+    internal fun displayPath(path: Path, home: Path): String {
+        val absolute = path.toAbsolutePath().normalize()
+        val base = home.toAbsolutePath().normalize()
+        return when {
+            absolute == base -> "~"
+            absolute.startsWith(base) -> "~/" + base.relativize(absolute).joinToString("/")
+            else -> absolute.toString()
         }
     }
+
+    private fun readPointer(file: Path): Path? {
+        if (!Files.isRegularFile(file)) return null
+        val stored = runCatching { Files.readString(file).trim() }.getOrNull()
+        if (stored.isNullOrBlank()) return null
+        return runCatching { Paths.get(stored) }.getOrNull()
+    }
+
+    private fun writePointer(file: Path, path: Path): Boolean = runCatching {
+        Files.createDirectories(configDir())
+        Files.writeString(file, path.toAbsolutePath().normalize().toString())
+        true
+    }.getOrDefault(false)
 
     public fun hostname(): String? = runCatching {
         System.getenv("HOSTNAME")

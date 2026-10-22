@@ -96,6 +96,12 @@ public class AppState(
 
     public var suggesterMinutes: Int by mutableStateOf(30)
 
+    /**
+     * The data folder chosen in Settings, as shown to the user, until the next
+     * launch switches to it. Null when no switch is waiting.
+     */
+    public var pendingFolder: String? by mutableStateOf(null)
+
     public val currentView: QuestView?
         get() = (route as? Route.Quests)?.view
 
