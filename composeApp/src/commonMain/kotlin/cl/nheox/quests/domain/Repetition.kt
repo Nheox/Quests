@@ -70,9 +70,9 @@ public data class Repetition(
 /**
  * A reminder, either relative to the due time or at a wall-clock moment.
  *
- * Desktop notifications are unreliable by nature (§7.5) — these feed the tray
- * and the digest, while the generated `.ics` feed is what actually reaches a
- * phone.
+ * Desktop notifications are unreliable by nature (§7.5) — these feed the
+ * notifications and the Reminders list, while the generated `.ics` feed is
+ * what actually reaches a phone. When one fires is [Reminders.moment].
  */
 @Serializable
 public sealed class Reminder {

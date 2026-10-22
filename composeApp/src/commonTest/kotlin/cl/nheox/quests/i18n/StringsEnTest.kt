@@ -1,6 +1,8 @@
 package cl.nheox.quests.i18n
 
 import cl.nheox.quests.domain.PriorityBreakdown
+import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -77,5 +79,24 @@ class StringsEnTest {
                 assertFalse(value.contains(word, ignoreCase = true), "$name: $value")
             }
         }
+    }
+
+    @Test
+    fun `amounts group their thousands with a narrow no-break space`() {
+        val nnbsp = "\u202F"
+        assertEquals("0 XP", StringsEn.xpAmount(0))
+        assertEquals("999 XP", StringsEn.xpAmount(999))
+        assertEquals("1${nnbsp}210 XP", StringsEn.xpAmount(1210))
+        assertEquals("12${nnbsp}379 XP", StringsEn.xpAmount(12379))
+        assertEquals("1${nnbsp}000${nnbsp}000 points", StringsEn.pointsAmount(1_000_000))
+        assertEquals("−1${nnbsp}500 points", StringsEn.pointsAmount(-1500))
+    }
+
+    @Test
+    fun `a reminder says when it fires, relative to today when it can`() {
+        val today = LocalDate.of(2026, 10, 22)
+        assertEquals("Reminder today 14:30", StringsEn.reminderAt(today.atTime(14, 30), today))
+        assertEquals("Reminder tomorrow 09:05", StringsEn.reminderAt(today.plusDays(1).atTime(9, 5), today))
+        assertEquals("Reminder Thu 29 Oct 08:00", StringsEn.reminderAt(LocalDateTime.of(2026, 10, 29, 8, 0), today))
     }
 }

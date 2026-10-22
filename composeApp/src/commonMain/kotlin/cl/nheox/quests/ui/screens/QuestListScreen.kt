@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import cl.nheox.quests.domain.DueBucket
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.QuestView
+import cl.nheox.quests.domain.Reminders
 import cl.nheox.quests.domain.SortDirection
 import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.Sorting
@@ -90,10 +91,15 @@ public fun QuestListScreen(
                     app.searchOpen && app.searchQuery.isNotBlank() -> text.messageNoResults
                     view == QuestView.TODAY -> text.messageNothingDueToday
                     view == QuestView.OVERDUE -> text.messageNoOverdue
+                    view == QuestView.REMINDERS -> text.messageNoReminders
                     state.quests.isEmpty() -> text.questsEmpty
                     else -> text.messageNoQuests
                 },
-                glyph = if (view == QuestView.OVERDUE) Glyph.CHECK else Glyph.INBOX,
+                glyph = when (view) {
+                    QuestView.OVERDUE -> Glyph.CHECK
+                    QuestView.REMINDERS -> Glyph.BELL
+                    else -> Glyph.INBOX
+                },
             )
             return@Column
         }
@@ -123,16 +129,25 @@ public fun QuestListScreen(
                 }
             } else {
                 items(quests, key = { it.id }) { quest ->
-                    ListRow(app, state, quest, today)
+                    ListRow(app, state, quest, today, subtitle = if (view == QuestView.REMINDERS) nextReminder(app, quest) else null)
                 }
             }
         }
     }
 }
 
+/** "Reminder today 14:30": the line the Reminders list shows under each quest. */
 @Composable
-private fun ListRow(app: AppState, state: QuestsState, quest: Quest, today: LocalDate) {
+private fun nextReminder(app: AppState, quest: Quest): String? {
+    val zone = app.clock.zone()
+    val next = Reminders.next(quest, app.clock.now(), zone) ?: return null
+    return strings.reminderAt(next.atZone(zone).toLocalDateTime(), app.clock.today())
+}
+
+@Composable
+private fun ListRow(app: AppState, state: QuestsState, quest: Quest, today: LocalDate, subtitle: String? = null) {
     QuestRow(
+        subtitle = subtitle,
         quest = quest,
         today = today,
         selected = app.selectedId == quest.id,

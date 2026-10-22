@@ -4,6 +4,7 @@ import cl.nheox.quests.domain.Clock
 import cl.nheox.quests.domain.Dates
 import cl.nheox.quests.domain.Quest
 import cl.nheox.quests.domain.Reminder
+import cl.nheox.quests.domain.Reminders
 import cl.nheox.quests.projection.QuestsState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -100,19 +101,7 @@ public class ReminderScheduler(
         }
     }
 
-    private fun dueAt(quest: Quest, reminder: Reminder): Instant? = when (reminder) {
-        is Reminder.BeforeDue -> {
-            val date = quest.dueDate
-            if (date == null) {
-                null
-            } else {
-                Dates.dueInstant(date, quest.dueTime, clock.zone())
-                    .minusSeconds(reminder.minutesBefore * 60L)
-            }
-        }
-
-        is Reminder.At -> reminder.date.atTime(reminder.time).atZone(clock.zone()).toInstant()
-    }
+    private fun dueAt(quest: Quest, reminder: Reminder): Instant? = Reminders.moment(quest, reminder, clock.zone())
 
     private fun reminderBody(quest: Quest): String = buildString {
         quest.dueTime?.let { append(it.toString()).append(" · ") }

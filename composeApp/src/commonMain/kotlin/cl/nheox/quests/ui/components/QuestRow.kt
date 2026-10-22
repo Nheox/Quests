@@ -67,6 +67,7 @@ public fun QuestRow(
     indent: Int = 0,
     expanded: Boolean? = null,
     onToggleExpand: (() -> Unit)? = null,
+    subtitle: String? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -124,9 +125,16 @@ public fun QuestRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (quest.notes.isNotBlank() || childCount > 0) {
+            // A view can say something more useful than the notes here — the
+            // Reminders list says when the next reminder fires.
+            val secondLine = subtitle ?: when {
+                childCount > 0 -> text.countSubQuests(childCount)
+                quest.notes.isNotBlank() -> quest.notes.lineSequence().first()
+                else -> null
+            }
+            if (secondLine != null) {
                 Text(
-                    text = if (childCount > 0) text.countSubQuests(childCount) else quest.notes.lineSequence().first(),
+                    text = secondLine,
                     style = MaterialTheme.typography.bodySmall,
                     color = theme.textFaint,
                     maxLines = 1,

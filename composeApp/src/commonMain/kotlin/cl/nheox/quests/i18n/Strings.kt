@@ -13,6 +13,7 @@ import cl.nheox.quests.domain.SuggestionReason
 import cl.nheox.quests.domain.Urgency
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Month
 
 /**
@@ -175,6 +176,7 @@ public interface Strings {
     public val messageNoQuests: String
     public val messageNothingDueToday: String
     public val messageNoOverdue: String
+    public val messageNoReminders: String
     public val messageNotEnoughPoints: String
     public val messageQuestCompleted: String
     public val messageQuestFailed: String
@@ -286,6 +288,9 @@ public interface Strings {
 
     /** "+3 more". */
     public fun moreCount(count: Int): String
+
+    /** "Reminder today 14:30", "Reminder tomorrow 09:00", "Reminder Thu 29 Oct 09:00". */
+    public fun reminderAt(moment: LocalDateTime, today: LocalDate): String
 
     /** "10 min · 6 XP", or "6 XP" when the quest has no estimate. */
     public fun questMeta(minutes: Int?, xp: Int): String

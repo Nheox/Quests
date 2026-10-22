@@ -32,14 +32,14 @@ public object Sorting {
             val ranked = Priority.order(quests, clock)
             return if (order.direction == SortDirection.DESCENDING) ranked else ranked.asReversed()
         }
-        val comparator = comparatorFor(order.key, skills)
+        val comparator = comparatorFor(order.key, skills, clock)
         val directed = if (order.direction == SortDirection.ASCENDING) comparator else comparator.reversed()
         // Title is the final tie-break everywhere, so sorting is total and
         // therefore stable across runs and across devices.
         return quests.sortedWith(directed.thenBy { it.title.lowercase() }.thenBy { it.id })
     }
 
-    private fun comparatorFor(key: SortKey, skills: Map<String, Skill>): Comparator<Quest> = when (key) {
+    private fun comparatorFor(key: SortKey, skills: Map<String, Skill>, clock: Clock): Comparator<Quest> = when (key) {
         // Top pins, then every unpinned quest at the anchor, then bottom pins.
         // Unlike PRIORITY this ignores the score, so the unpinned middle falls
         // to the title tie-break.
@@ -49,6 +49,12 @@ public object Sorting {
         SortKey.UPDATED -> compareBy { it.updatedAt }
         SortKey.DUE_DATE -> compareBy(nullsLast()) { quest ->
             quest.dueDate?.atTime(quest.dueTime ?: LocalTime.MAX)
+        }
+
+        SortKey.REMINDER -> {
+            // Read once for the whole sort, so every comparison uses one "now".
+            val now = clock.now()
+            compareBy(nullsLast()) { quest -> Reminders.next(quest, now, clock.zone()) }
         }
 
         SortKey.DIFFICULTY -> compareBy { it.difficulty.ordinal }

@@ -12,6 +12,9 @@ public enum class QuestView {
     LAST_SEVEN_DAYS,
     FAILED,
     NO_DUE_DATE,
+
+    /** Open quests with a reminder still to come, soonest first (§7.2). */
+    REMINDERS,
 }
 
 /**
@@ -28,6 +31,9 @@ public enum class SortKey {
     CREATED,
     UPDATED,
     DUE_DATE,
+
+    /** The next reminder still to come; quests with none sort last. */
+    REMINDER,
     DIFFICULTY,
     FEAR,
     URGENCY,
@@ -93,6 +99,11 @@ public object Views {
             }
 
             QuestView.NO_DUE_DATE -> quests.filter { it.isOpen && it.dueDate == null }
+
+            QuestView.REMINDERS -> {
+                val now = clock.now()
+                quests.filter { Reminders.next(it, now, clock.zone()) != null }
+            }
         }
     }
 
@@ -127,7 +138,8 @@ public object Views {
      * Every list of open quests orders itself by priority (§3, §5.6): the user
      * rates a quest once and the app decides what rises. The history views
      * answer a different question — what happened, most recent first — so
-     * they keep a date order.
+     * they keep a date order. Reminders answers "what will interrupt me
+     * next?", so it runs soonest first.
      */
     public fun defaultSort(view: QuestView): SortOrder = when (view) {
         QuestView.TODAY,
@@ -141,5 +153,6 @@ public object Views {
 
         QuestView.COMPLETED, QuestView.LAST_SEVEN_DAYS -> SortOrder(SortKey.COMPLETED, SortDirection.DESCENDING)
         QuestView.FAILED -> SortOrder(SortKey.UPDATED, SortDirection.DESCENDING)
+        QuestView.REMINDERS -> SortOrder(SortKey.REMINDER, SortDirection.ASCENDING)
     }
 }

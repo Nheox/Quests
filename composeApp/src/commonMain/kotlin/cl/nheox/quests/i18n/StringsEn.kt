@@ -14,7 +14,9 @@ import cl.nheox.quests.domain.SuggestionReason
 import cl.nheox.quests.domain.Urgency
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Month
+import java.util.Locale
 
 /** British English, the language the app was written in. */
 public object StringsEn : Strings {
@@ -165,6 +167,7 @@ public object StringsEn : Strings {
     override val messageNoQuests: String = "Nothing here."
     override val messageNothingDueToday: String = "Nothing due today. That is allowed."
     override val messageNoOverdue: String = "Nothing overdue."
+    override val messageNoReminders: String = "No reminders to come. Add one from a quest's details."
     override val messageNotEnoughPoints: String = "Not enough reward points."
     override val messageQuestCompleted: String = "Quest completed"
     override val messageQuestFailed: String = "Quest failed"
@@ -240,9 +243,9 @@ public object StringsEn : Strings {
     override val priorityAutomatic: String = "Placed by priority"
     override val messageCaptureUnavailable: String = "Global quick capture is unavailable on this system; the app itself is unaffected."
 
-    override fun xpAmount(amount: Int): String = "$amount XP"
+    override fun xpAmount(amount: Int): String = "${grouped(amount.toLong())} XP"
 
-    override fun pointsAmount(amount: Int): String = "$amount points"
+    override fun pointsAmount(amount: Int): String = "${grouped(amount.toLong())} points"
 
     override fun levelUpMessage(skill: String, level: Int): String = "$skill reached level $level"
 
@@ -293,6 +296,17 @@ public object StringsEn : Strings {
 
     override fun moreCount(count: Int): String = "+$count more"
 
+    override fun reminderAt(moment: LocalDateTime, today: LocalDate): String {
+        // Locale.ROOT: some locales format digits in another script.
+        val time = String.format(Locale.ROOT, "%02d:%02d", moment.hour, moment.minute)
+        val day = when (moment.toLocalDate()) {
+            today -> "today"
+            today.plusDays(1) -> "tomorrow"
+            else -> "${weekdayShort(moment.dayOfWeek)} ${moment.dayOfMonth} ${monthShort(moment.month)}"
+        }
+        return "Reminder $day $time"
+    }
+
     override fun questMeta(minutes: Int?, xp: Int): String {
         val time = when {
             minutes == null -> null
@@ -332,6 +346,18 @@ public object StringsEn : Strings {
     override fun weekdayShort(day: DayOfWeek): String = weekdayLong(day).take(3)
 
     override fun monthShort(month: Month): String = monthLong(month).take(3)
+
+    /**
+     * "1 210": thousands set apart by a narrow no-break space, the SI
+     * convention, which reads the same in every locale and never lets a
+     * number wrap in the middle.
+     */
+    private fun grouped(value: Long): String {
+        val digits = kotlin.math.abs(value).toString()
+        val head = digits.length % 3
+        val groups = listOfNotNull(digits.take(head).ifEmpty { null }) + digits.drop(head).chunked(3)
+        return (if (value < 0) "−" else "") + groups.joinToString("\u202F")
+    }
 
     // Spelled out rather than taken from java.time's display names, which
     // follow the JVM's default locale: on a machine set to another language
@@ -436,6 +462,7 @@ public object StringsEn : Strings {
         QuestView.LAST_SEVEN_DAYS -> "Last 7 days"
         QuestView.FAILED -> "Failed"
         QuestView.NO_DUE_DATE -> "No due date"
+        QuestView.REMINDERS -> "Reminders"
     }
 
     override fun bucket(value: DueBucket): String = when (value) {
@@ -454,6 +481,7 @@ public object StringsEn : Strings {
         SortKey.CREATED -> "Created"
         SortKey.UPDATED -> "Updated"
         SortKey.DUE_DATE -> "Due date"
+        SortKey.REMINDER -> "Next reminder"
         SortKey.DIFFICULTY -> "Difficulty"
         SortKey.FEAR -> "Fear"
         SortKey.URGENCY -> "Urgency"

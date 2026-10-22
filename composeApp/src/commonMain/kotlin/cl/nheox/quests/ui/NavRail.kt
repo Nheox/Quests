@@ -22,14 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cl.nheox.quests.BuildInfo
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.Views
 import cl.nheox.quests.projection.QuestsState
 import cl.nheox.quests.ui.components.EnergyBar
-import cl.nheox.quests.ui.components.HLine
 import cl.nheox.quests.ui.components.Pill
-import cl.nheox.quests.ui.components.SectionHeader
 import cl.nheox.quests.ui.components.clickableRow
 import cl.nheox.quests.ui.components.focusRing
 import cl.nheox.quests.ui.theme.Glyph
@@ -70,11 +69,13 @@ public fun NavRail(
             horizontalArrangement = Arrangement.spacedBy(Space.sm),
         ) {
             QuestIcon(Glyph.TARGET, size = 18.dp, tint = theme.progression)
-            Text(text.appName, style = MaterialTheme.typography.titleMedium, color = theme.text)
+            Text(
+                text.appName,
+                style = MaterialTheme.typography.titleMedium,
+                color = theme.text,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
-
-        HLine()
-        Spacer(Modifier.height(Space.sm))
 
         // Profile strip: energy and the purse, the two numbers worth watching.
         Column(
@@ -84,11 +85,16 @@ public fun NavRail(
                 .padding(Space.sm),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                Text(text.energy, style = MaterialTheme.typography.labelMedium, color = theme.textFaint)
+                Text(
+                    text.energy,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = theme.text,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Spacer(Modifier.weight(1f))
                 Text(
                     "$energy · ${text.energyBand(cl.nheox.quests.domain.Energy.band(energy))}",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
                     color = theme.textMuted,
                 )
             }
@@ -99,25 +105,20 @@ public fun NavRail(
                 QuestIcon(Glyph.COIN, size = 12.dp, tint = theme.accent)
                 Text(
                     text.pointsAmount(state.profile.rewardPointBalance),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = theme.accent,
+                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                    color = theme.textMuted,
                 )
                 Spacer(Modifier.weight(1f))
                 QuestIcon(Glyph.SPARK, size = 12.dp, tint = theme.progression)
                 Text(
-                    state.totalXp.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = theme.progression,
+                    text.xpAmount(state.totalXp.toInt()),
+                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                    color = theme.textMuted,
                 )
             }
         }
 
-        // The launch view leads, above the lists: it is where the app opens,
-        // and the place to come back to for the whole picture.
-        Spacer(Modifier.height(Space.sm))
-        RailItem(text.navStanding, Glyph.SHIELD, app.route == Route.Standing, null) { app.go(Route.Standing) }
-
-        SectionHeader(text.sectionQuests)
+        RailSection(text.sectionQuests)
         PRIMARY_VIEWS.forEach { view ->
             val count = Views.filter(view, state.quests.values, app.clock).size
             RailItem(
@@ -125,35 +126,29 @@ public fun NavRail(
                 glyph = glyphFor(view),
                 selected = app.currentView == view,
                 count = count,
-                emphasis = view == QuestView.OVERDUE && count > 0,
                 onClick = { app.goToView(view) },
             )
         }
 
-        SectionHeader(text.sectionProgress)
-        RailItem(text.navSkills, Glyph.SPARK, app.route == Route.Skills, state.skills.size) {
-            app.go(Route.Skills)
-        }
-        RailItem(text.navRewards, Glyph.GIFT, app.route == Route.Rewards, state.rewards.size) {
-            app.go(Route.Rewards)
-        }
-        RailItem(text.navInventory, Glyph.BOX, app.route == Route.Inventory, state.items.size) {
-            app.go(Route.Inventory)
-        }
-        RailItem(
-            label = text.navScratchpad,
-            glyph = Glyph.LIST,
-            selected = app.route == Route.Scratchpad,
-            count = state.globalNotes().count { !it.done },
-        ) { app.go(Route.Scratchpad) }
+        // Progress: where things stand, and the parts of the game. The lists
+        // here are not quest lists, so they carry no counts.
+        RailSection(text.sectionProgress)
+        RailItem(text.navStanding, Glyph.SHIELD, app.route == Route.Standing, null) { app.go(Route.Standing) }
+        RailItem(text.navSkills, Glyph.SPARK, app.route == Route.Skills, null) { app.go(Route.Skills) }
+        RailItem(text.navRewards, Glyph.GIFT, app.route == Route.Rewards, null) { app.go(Route.Rewards) }
+        RailItem(text.navInventory, Glyph.BOX, app.route == Route.Inventory, null) { app.go(Route.Inventory) }
+        RailItem(text.navScratchpad, Glyph.LIST, app.route == Route.Scratchpad, null) { app.go(Route.Scratchpad) }
         RailItem(text.navStats, Glyph.CHART, app.route == Route.Insight, null) { app.go(Route.Insight) }
 
-        SectionHeader(text.sectionApp)
-        RailItem(text.navCompleted, Glyph.CHECK, app.currentView == QuestView.COMPLETED, null) {
-            app.goToView(QuestView.COMPLETED)
-        }
-        RailItem(text.navFailed, Glyph.CROSS, app.currentView == QuestView.FAILED, null) {
-            app.goToView(QuestView.FAILED)
+        RailSection(text.sectionApp)
+        listOf(QuestView.COMPLETED, QuestView.FAILED).forEach { view ->
+            RailItem(
+                label = text.view(view),
+                glyph = glyphFor(view),
+                selected = app.currentView == view,
+                count = Views.filter(view, state.quests.values, app.clock).size,
+                onClick = { app.goToView(view) },
+            )
         }
         RailItem(text.navSettings, Glyph.GEAR, app.route == Route.Settings, null) { app.go(Route.Settings) }
         RailItem(text.navHelp, Glyph.HELP, app.route == Route.Help, null) { app.go(Route.Help) }
@@ -176,12 +171,13 @@ private val PRIMARY_VIEWS = listOf(
     QuestView.PLAN,
     QuestView.ALL,
     QuestView.NO_DUE_DATE,
+    QuestView.REMINDERS,
 )
 
 private fun glyphFor(view: QuestView): Glyph = when (view) {
     QuestView.TODAY -> Glyph.SUN
     QuestView.TOMORROW -> Glyph.CHEVRON_RIGHT
-    QuestView.OVERDUE -> Glyph.BELL
+    QuestView.OVERDUE -> Glyph.FLAME
     QuestView.NEXT -> Glyph.CALENDAR
     QuestView.PLAN -> Glyph.TREE
     QuestView.ALL -> Glyph.LIST
@@ -189,6 +185,23 @@ private fun glyphFor(view: QuestView): Glyph = when (view) {
     QuestView.LAST_SEVEN_DAYS -> Glyph.CLOCK
     QuestView.FAILED -> Glyph.CROSS
     QuestView.NO_DUE_DATE -> Glyph.INBOX
+    QuestView.REMINDERS -> Glyph.BELL
+}
+
+/**
+ * A section's name in the rail. Plain, without the rule the reading pages
+ * draw after theirs: in a column this narrow the rule would only repeat the
+ * gap the section already has.
+ */
+@Composable
+private fun RailSection(title: String) {
+    Text(
+        title.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = theme.textFaint,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(start = Space.sm, top = Space.lg, bottom = Space.xs),
+    )
 }
 
 @Composable
@@ -197,7 +210,6 @@ private fun RailItem(
     glyph: Glyph,
     selected: Boolean,
     count: Int?,
-    emphasis: Boolean = false,
     onClick: () -> Unit,
 ) {
     Row(
@@ -217,17 +229,11 @@ private fun RailItem(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (selected) theme.text else theme.textMuted,
+            color = if (selected) theme.accent else theme.textMuted,
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             modifier = Modifier.weight(1f),
             maxLines = 1,
         )
-        if (count != null && count > 0) {
-            Pill(
-                count.toString(),
-                color = if (emphasis) theme.danger else theme.textFaint,
-                bold = emphasis,
-            )
-        }
+        if (count != null && count > 0) Pill(count.toString(), color = theme.textFaint)
     }
 }
