@@ -170,4 +170,6 @@ public data class Settings(
     val startInTray: Boolean = false,
     /** The screen the app opens on; Standing unless the user chose another. */
     val launchView: LaunchView = LaunchView.STANDING,
+    /** Light, dark, or the system's appearance, which is the default. */
+    val theme: ThemeMode = ThemeMode.SYSTEM,
 )

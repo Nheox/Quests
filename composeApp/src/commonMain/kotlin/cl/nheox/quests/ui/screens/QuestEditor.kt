@@ -58,7 +58,6 @@ import cl.nheox.quests.ui.components.NumberField
 import cl.nheox.quests.ui.components.Pill
 import cl.nheox.quests.ui.components.QuestButton
 import cl.nheox.quests.ui.components.QuestTextField
-import cl.nheox.quests.ui.components.RepetitionField
 import cl.nheox.quests.ui.components.SegmentedSelector
 import cl.nheox.quests.ui.components.TimeField
 import cl.nheox.quests.ui.components.XpPill

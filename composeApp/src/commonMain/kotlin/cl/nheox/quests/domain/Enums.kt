@@ -126,3 +126,16 @@ public enum class LaunchView {
     ALL,
     PLAN,
 }
+
+/**
+ * Light or dark, or whatever the system uses (DESIGN §8: the system's
+ * appearance is followed by default, with an explicit override).
+ *
+ * Stored by name in a settings event; an unknown name means [SYSTEM].
+ */
+@Serializable
+public enum class ThemeMode {
+    SYSTEM,
+    DARK,
+    LIGHT,
+}

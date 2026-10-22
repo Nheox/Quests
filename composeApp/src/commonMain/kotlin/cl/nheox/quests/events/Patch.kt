@@ -155,4 +155,5 @@ public object SettingsFields {
     public const val ONBOARDING_COMPLETE: String = "onboardingComplete"
     public const val START_IN_TRAY: String = "startInTray"
     public const val LAUNCH_VIEW: String = "launchView"
+    public const val THEME: String = "theme"
 }

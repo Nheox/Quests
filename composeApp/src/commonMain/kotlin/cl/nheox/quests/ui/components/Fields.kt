@@ -40,8 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import cl.nheox.quests.domain.RepeatUnit
-import cl.nheox.quests.domain.Repetition
 import cl.nheox.quests.ui.theme.Glyph
 import cl.nheox.quests.ui.theme.QuestIcon
 import cl.nheox.quests.ui.theme.Radii
@@ -220,18 +218,24 @@ public fun ToggleRow(
             }
         }
         Spacer(Modifier.width(Space.md))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = theme.onAccent,
-                checkedTrackColor = theme.accent,
-                uncheckedThumbColor = theme.textFaint,
-                uncheckedTrackColor = theme.card,
-                uncheckedBorderColor = theme.border,
-            ),
-        )
+        QuestSwitch(checked, onCheckedChange)
     }
+}
+
+/** The app's switch: teal when on, the card's value when off. */
+@Composable
+public fun QuestSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = theme.onAccent,
+            checkedTrackColor = theme.accent,
+            uncheckedThumbColor = theme.textFaint,
+            uncheckedTrackColor = theme.card,
+            uncheckedBorderColor = theme.border,
+        ),
+    )
 }
 
 /** A numeric stepper for minutes, costs and quantities. */
@@ -414,47 +418,6 @@ internal fun parseTime(text: String): LocalTime? {
         }
 
         else -> null
-    }
-}
-
-@Composable
-public fun RepetitionField(
-    value: Repetition?,
-    onValueChange: (Repetition?) -> Unit,
-    modifier: Modifier = Modifier,
-    onFocusChange: (Boolean) -> Unit = {},
-) {
-    val text = strings
-    Column(modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-            NumberField(
-                value = value?.every,
-                onValueChange = { every ->
-                    if (every == null || every < 1) {
-                        onValueChange(null)
-                    } else {
-                        onValueChange(Repetition(value?.unit ?: RepeatUnit.DAY, every))
-                    }
-                },
-                step = 1,
-                minimum = 1,
-                placeholder = "—",
-                onFocusChange = onFocusChange,
-            )
-            if (value != null) {
-                IconAction(Glyph.CROSS, strings.actionClear, size = 26.dp, onClick = { onValueChange(null) })
-            }
-        }
-        if (value != null) {
-            Spacer(Modifier.height(Space.xs))
-            SegmentedSelector(
-                options = RepeatUnit.entries,
-                selected = value.unit,
-                onSelect = { onValueChange(value.copy(unit = it)) },
-                label = { text.repeatUnit(it) },
-                compact = true,
-            )
-        }
     }
 }
 

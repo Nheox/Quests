@@ -14,6 +14,7 @@ import cl.nheox.quests.domain.Repetition
 import cl.nheox.quests.domain.Reward
 import cl.nheox.quests.domain.ScratchpadEntry
 import cl.nheox.quests.domain.Skill
+import cl.nheox.quests.domain.ThemeMode
 import cl.nheox.quests.domain.Urgency
 import cl.nheox.quests.events.Event
 import cl.nheox.quests.events.EventCodec
@@ -492,6 +493,9 @@ public object Projector {
                     SettingsFields.LAUNCH_VIEW -> settings.copy(
                         launchView = value.asEnum(LaunchView.entries) ?: LaunchView.STANDING,
                     )
+
+                    // The same rule: a theme this version does not know follows the system.
+                    SettingsFields.THEME -> settings.copy(theme = value.asEnum(ThemeMode.entries) ?: ThemeMode.SYSTEM)
 
                     else -> settings
                 }

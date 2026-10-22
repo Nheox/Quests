@@ -27,6 +27,7 @@ import androidx.compose.ui.window.rememberWindowState
 import cl.nheox.quests.domain.Clock
 import cl.nheox.quests.domain.Language
 import cl.nheox.quests.domain.QuickAdd
+import cl.nheox.quests.domain.ThemeMode
 import cl.nheox.quests.domain.QuickAddResult
 import cl.nheox.quests.events.Compaction
 import cl.nheox.quests.events.DeviceIdentity
@@ -292,7 +293,15 @@ private fun launchUi(
         // desktop icon.
         val iconBitmap = remember { loadIcon() }
         val icon = remember { BitmapPainter(iconBitmap) }
-        val dark = isSystemInDarkTheme() || true
+        // The system's appearance unless Settings says otherwise (DESIGN §8).
+        // Before a data folder is open there are no settings yet: follow it.
+        val systemDark = isSystemInDarkTheme()
+        val themeMode = runtime?.let { it.store.state.collectAsState().value.settings.theme } ?: ThemeMode.SYSTEM
+        val dark = when (themeMode) {
+            ThemeMode.SYSTEM -> systemDark
+            ThemeMode.DARK -> true
+            ThemeMode.LIGHT -> false
+        }
 
         LaunchedEffect(shell.quitRequested) {
             if (shell.quitRequested) exitApplication()

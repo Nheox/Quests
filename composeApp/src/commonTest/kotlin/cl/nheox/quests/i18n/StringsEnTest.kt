@@ -40,8 +40,7 @@ class StringsEnTest {
     fun `the energy modes are called Auto and Manual, never a sleep schedule`() {
         assertEquals("Auto", StringsEn.energyAuto)
         assertEquals("Manual", StringsEn.energyManual)
-        assertEquals("Wake up", StringsEn.energyWakeTime)
-        assertEquals("Bedtime", StringsEn.energyBedtime)
+        assertEquals("Wake up · bedtime", StringsEn.energyTimes)
         assertEquals("Drains across your day, from wake-up to bedtime.", StringsEn.energyAutoBody)
     }
 

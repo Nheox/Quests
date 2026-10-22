@@ -4,6 +4,7 @@ import cl.nheox.quests.domain.Clock
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.Fear
 import cl.nheox.quests.domain.LaunchView
+import cl.nheox.quests.domain.ThemeMode
 import cl.nheox.quests.domain.QuestState
 import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.Repetition
@@ -510,5 +511,14 @@ class StoreTest {
         // A newer release's choice, or a hand edit: not the older PLAN, but Standing.
         store.changeSettings(FieldPatch().set(SettingsFields.LAUNCH_VIEW, "SHOP"))
         assertEquals(LaunchView.STANDING, newStore().state.value.settings.launchView)
+    }
+
+    @Test
+    fun `the theme follows the system unless set, and an unknown one follows it again`() {
+        assertEquals(ThemeMode.SYSTEM, state().settings.theme)
+        store.changeSettings(FieldPatch().setEnum(SettingsFields.THEME, ThemeMode.LIGHT))
+        assertEquals(ThemeMode.LIGHT, newStore().state.value.settings.theme)
+        store.changeSettings(FieldPatch().set(SettingsFields.THEME, "SEPIA"))
+        assertEquals(ThemeMode.SYSTEM, newStore().state.value.settings.theme)
     }
 }

@@ -244,7 +244,7 @@ private fun SortControl(app: AppState) {
         DropdownMenu(
             expanded = open,
             onDismissRequest = { open = false },
-            modifier = Modifier.background(theme.surface),
+            containerColor = theme.card,
         ) {
             SortKey.entries.forEach { key ->
                 DropdownMenuItem(

@@ -193,7 +193,7 @@ private fun SortButton(sort: SkillSort, onSort: (SkillSort) -> Unit) {
     }
     Box {
         QuestButton(text.sortedBy(label(sort)), compact = true, onClick = { open = true })
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = theme.card) {
             SkillSort.entries.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(label(option), color = if (option == sort) theme.accent else theme.text) },

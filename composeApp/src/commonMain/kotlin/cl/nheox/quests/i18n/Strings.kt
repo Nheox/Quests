@@ -11,6 +11,7 @@ import cl.nheox.quests.domain.RepeatUnit
 import cl.nheox.quests.domain.Repetition
 import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.SuggestionReason
+import cl.nheox.quests.domain.ThemeMode
 import cl.nheox.quests.domain.Urgency
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -39,9 +40,7 @@ public interface Strings {
     public val navNext: String
     public val navPlan: String
     public val navAll: String
-    public val navCompleted: String
     public val navLastSevenDays: String
-    public val navFailed: String
     public val navNoDueDate: String
     public val navSkills: String
     public val navRewards: String
@@ -111,7 +110,6 @@ public interface Strings {
     public val fieldQuantity: String
     public val fieldConsumable: String
     public val fieldName: String
-    public val fieldMinutes: String
     public val fieldRewardBonus: String
     public val fieldRewardBonusBody: String
     public val fieldPoints: String
@@ -150,15 +148,12 @@ public interface Strings {
     public val statsDays: String
     public val level: String
     public val xp: String
-    public val xpToNext: String
     public val rewardPoints: String
     public val energy: String
     public val energyManual: String
     public val energyManualBody: String
     public val energyAuto: String
     public val energyAutoBody: String
-    public val energyWakeTime: String
-    public val energyBedtime: String
     public val energyHigh: String
     public val energyMedium: String
     public val energyLow: String
@@ -208,6 +203,30 @@ public interface Strings {
     public val skillSortLevel: String
     public val skillSortName: String
     public val skillSortRecent: String
+    public val settingsGeneral: String
+    public val settingsTheme: String
+    public val settingsThemeBody: String
+    public val settingsTrayBody: String
+    public val energyHowSet: String
+    public val energyTimes: String
+    public val energyTimesBody: String
+    public val energyLevel: String
+    public val energyLevelBody: String
+    public val energyNow: String
+    public val settingsRemindersBody: String
+    public val settingsYourData: String
+    public val settingsDataFolder: String
+    public val settingsDataFolderBody: String
+    public val settingsDeviceShort: String
+    public val settingsCalendarFile: String
+    public val settingsCalendarBody: String
+    public val settingsMarkdownFile: String
+    public val settingsMarkdownBody: String
+    public val settingsExportBody: String
+    public val settingsHotkeyBody: String
+    public val settingsAdvanced: String
+    public val settingsCompactBody: String
+    public val settingsReloadBody: String
     public val fieldParent: String
     public val topLevel: String
     public val repeatNever: String
@@ -230,28 +249,19 @@ public interface Strings {
     public val messageSkippedLines: String
     public val messageCompacted: String
     public val messageNothingToCompact: String
-    public val settingsFolder: String
-    public val settingsFolderBody: String
     public val settingsDevice: String
-    public val settingsDeviceBody: String
-    public val settingsSounds: String
     public val settingsFailureCosts: String
     public val settingsFailureCostsBody: String
     public val settingsReminders: String
     public val settingsTray: String
     public val settingsLaunchView: String
     public val settingsLaunchViewBody: String
-    public val settingsIcsExport: String
-    public val settingsIcsExportBody: String
-    public val settingsMarkdownExport: String
     public val settingsHotkey: String
     public val settingsHotkeyInstall: String
     public val settingsHotkeyInstalled: String
     public val settingsHotkeyFailed: String
     public val settingsAbout: String
-    public val settingsVersion: String
     public val settingsLicence: String
-    public val settingsDanger: String
     public val firstRunTitle: String
     public val firstRunBody: String
     public val firstRunChoose: String
@@ -350,6 +360,9 @@ public interface Strings {
 
     /** "you have 3". */
     public fun youHave(quantity: Int): String
+
+    /** "System", "Dark", "Light". */
+    public fun themeMode(value: ThemeMode): String
 
     /** "Sort: level". */
     public fun sortedBy(what: String): String
