@@ -71,6 +71,7 @@ public fun UndoBar(
             is Undoable.Failed -> Triple(Glyph.CROSS, text.messageQuestFailed, action.title)
             is Undoable.Deleted -> Triple(Glyph.TRASH, text.messageQuestDeleted, action.title)
             is Undoable.Claimed -> Triple(Glyph.GIFT, text.messageRewardClaimed, action.name)
+            is Undoable.Moved -> Triple(Glyph.TREE, text.questsMoved(action.moves.size), text.movedDetail(action.parentTitle))
         }
 
         Row(

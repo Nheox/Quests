@@ -8,6 +8,7 @@ import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.PriorityBreakdown
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.RepeatUnit
+import cl.nheox.quests.domain.Repetition
 import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.SuggestionReason
 import cl.nheox.quests.domain.Urgency
@@ -178,6 +179,20 @@ public interface Strings {
     public val messageNothingDueToday: String
     public val messageNoOverdue: String
     public val messageNoReminders: String
+    public val pickerMove: String
+    public val pickerChoose: String
+    public val pickerClose: String
+    public val pickerSearchSkills: String
+    public val pickerSearchQuests: String
+    public val pickerDurationHint: String
+    public val pickerRepeatHint: String
+    public val actionMoveUnder: String
+    public val actionAddInline: String
+    public val actionChange: String
+    public val fieldParent: String
+    public val topLevel: String
+    public val repeatNever: String
+    public val noEstimate: String
     public val messageNotEnoughPoints: String
     public val messageQuestCompleted: String
     public val messageQuestFailed: String
@@ -289,6 +304,24 @@ public interface Strings {
 
     /** "+3 more". */
     public fun moreCount(count: Int): String
+
+    /** The picker's create line: "+ New skill “Cooking”", or "+ New skill…" before anything is typed. */
+    public fun newSkill(name: String): String
+
+    /** The duration picker's create line: "Use 37 min", or a prompt while nothing usable is typed. */
+    public fun useMinutes(minutes: Int?): String
+
+    /** "Every day", "Every 3 weeks". */
+    public fun repetitionLabel(repetition: Repetition): String
+
+    /** The repeat picker's create line: "Every 3 days", or a prompt while nothing usable is typed. */
+    public fun useRepetition(repetition: Repetition?): String
+
+    /** "Moved 1 quest", "Moved 3 quests": the snackbar after Move under…. */
+    public fun questsMoved(count: Int): String
+
+    /** "under Methods" or "to the top level", under the snackbar's line. */
+    public fun movedDetail(parentTitle: String?): String
 
     /** "due today 15:00", "due tomorrow", "due Friday", "due 14 Nov", "overdue 3 days". */
     public fun dueMeta(due: LocalDate, time: LocalTime?, today: LocalDate): String

@@ -59,13 +59,22 @@ public sealed class Undoable {
     public data class Claimed(val rewardId: String, val name: String, val costPaid: Int) : Undoable() {
         override val label: UndoLabel get() = UndoLabel.CLAIMED
     }
+
+    /** Quests moved under [parentTitle] (null: to the top level), each with where it came from. */
+    public data class Moved(val moves: List<Move>, val parentTitle: String?) : Undoable() {
+        override val label: UndoLabel get() = UndoLabel.MOVED
+    }
 }
+
+/** One quest's move, with the parent it had before, so undo can put it back. */
+public data class Move(val questId: String, val from: String?)
 
 public enum class UndoLabel {
     COMPLETED,
     FAILED,
     DELETED,
     CLAIMED,
+    MOVED,
 }
 
 /**
@@ -340,6 +349,41 @@ public class QuestStore(
     public fun promoteToTopLevel(id: String): Unit = reparent(id, null)
 
     /**
+     * Moves every one of [ids] under [parentId], or to the top level when it
+     * is null — "Move under…" on a selection — as one undoable action.
+     *
+     * A quest that is already there, or that would land inside its own branch,
+     * is left where it is rather than failing the whole move: moving five
+     * quests where one is the target's own parent should still move four.
+     */
+    public fun moveUnder(ids: Collection<String>, parentId: String?) {
+        val current = _state.value
+        val parent = parentId?.let { current.quests[it] ?: return }
+        val moves = ids.distinct().mapNotNull { id ->
+            val quest = current.quests[id] ?: return@mapNotNull null
+            when {
+                quest.parentId == parentId -> null
+                parentId != null && current.branch(id).any { it.id == parentId } -> null
+                else -> Move(id, quest.parentId)
+            }
+        }
+        if (moves.isEmpty()) return
+        val now = clock.now()
+        emitAll(
+            moves.map { move ->
+                Event.QuestChanged(
+                    now,
+                    stamp(),
+                    device.id,
+                    move.questId,
+                    FieldPatch().setStringOrNull(QuestFields.PARENT_ID, parentId).build(),
+                )
+            },
+        )
+        _undoable.value = Undoable.Moved(moves, parent?.title)
+    }
+
+    /**
      * Pins a quest above the automatic order of its sibling group, and above
      * any quest already pinned there.
      *
@@ -588,6 +632,21 @@ public class QuestStore(
             is Undoable.Deleted -> {
                 val now = clock.now()
                 emitAll(action.questIds.map { Event.QuestRestored(now, stamp(), device.id, it) })
+            }
+
+            is Undoable.Moved -> {
+                val now = clock.now()
+                emitAll(
+                    action.moves.map { move ->
+                        Event.QuestChanged(
+                            now,
+                            stamp(),
+                            device.id,
+                            move.questId,
+                            FieldPatch().setStringOrNull(QuestFields.PARENT_ID, move.from).build(),
+                        )
+                    },
+                )
             }
 
             is Undoable.Claimed -> {

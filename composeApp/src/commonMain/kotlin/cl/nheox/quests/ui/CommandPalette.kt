@@ -111,6 +111,9 @@ public fun commands(
         out += Command(text.actionPromote, Glyph.ARROW_UP, "P", text.sectionQuests) {
             app.store.promoteToTopLevel(selected)
         }
+        out += Command(text.actionMoveUnder, Glyph.TREE, "Shift+M", text.sectionQuests) {
+            app.overlay = Overlay.MoveUnder(app.targets())
+        }
         out += Command(text.actionPinToTop, Glyph.ARROW_UP, "[", text.sectionQuests) { app.store.pinToTop(selected) }
         out += Command(text.actionPinToBottom, Glyph.ARROW_DOWN, "]", text.sectionQuests) {
             app.store.pinToBottom(selected)

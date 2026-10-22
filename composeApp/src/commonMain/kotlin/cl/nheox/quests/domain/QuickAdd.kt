@@ -167,6 +167,24 @@ public object QuickAdd {
     private val carets = Regex("""(?<!\S)(\^{1,5})(?!\S)""")
     private val bangs = Regex("""(?<!\S)(!{1,4})(?!\S)""")
 
+    /**
+     * A duration typed on its own — "37", "45m", "1h 30m", "2h" — read the way
+     * quick-add reads "~…", so a picker accepts exactly what the quick-add
+     * line does. Null when it is not a positive duration.
+     */
+    public fun parseMinutes(input: String): Int? =
+        input.trim().takeIf { it.isNotEmpty() }?.let { parse("~$it", LocalDate.EPOCH).estimatedMinutes }?.takeIf { it > 0 }
+
+    /**
+     * A repetition typed on its own — "daily", "week", "3 days", "every 2
+     * weeks" — read as quick-add reads it. Null when it is not one.
+     */
+    public fun parseRepetition(input: String): Repetition? {
+        val text = input.trim()
+        if (text.isEmpty()) return null
+        return parse(text, LocalDate.EPOCH).repetition ?: parse("every $text", LocalDate.EPOCH).repetition
+    }
+
     public fun parse(input: String, today: LocalDate): QuickAddResult {
         var rest = input
         val skills = mutableListOf<String>()

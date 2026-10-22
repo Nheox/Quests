@@ -54,6 +54,9 @@ public sealed interface Overlay {
 
     public data class SkillPicker(val questIds: List<String>) : Overlay
 
+    /** "Move under…": a new parent for these quests, chosen in the picker. */
+    public data class MoveUnder(val questIds: List<String>) : Overlay
+
     public data class ConfirmDelete(val questIds: List<String>, val title: String) : Overlay
 }
 

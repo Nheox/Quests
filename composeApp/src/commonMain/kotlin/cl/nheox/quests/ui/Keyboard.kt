@@ -190,8 +190,15 @@ public object Shortcuts {
             }
 
             Key.M -> {
-                selected?.let { app.toggleMark(it) }
-                selected != null
+                if (event.isShiftPressed) {
+                    // Shift-M: Move under… for the marked quests, or the cursor's.
+                    val targets = app.targets()
+                    if (targets.isNotEmpty()) app.overlay = Overlay.MoveUnder(targets)
+                    targets.isNotEmpty()
+                } else {
+                    selected?.let { app.toggleMark(it) }
+                    selected != null
+                }
             }
 
             Key.Delete, Key.Backspace -> {
@@ -301,6 +308,7 @@ public object Shortcuts {
         "Ctrl+A" to "Select every quest in the list",
         "Ctrl+," to "Settings",
         "Ctrl+0" to "Standing, where things stand at a glance",
+        "Shift+M" to "Move the selected quests under another quest",
         "Ctrl+1…9" to "Jump to a view",
         "↑ ↓" to "Move the cursor (j and k also work)",
         "Space" to "Complete the selected quest (c also works)",

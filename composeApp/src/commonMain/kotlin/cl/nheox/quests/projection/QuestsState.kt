@@ -120,6 +120,33 @@ public data class QuestsState(
         return out
     }
 
+    /**
+     * A quest's ancestors, outermost first — the path a picker shows so two
+     * quests with one title can be told apart. Stops at a missing parent, and
+     * at a cycle should a hand-edited log ever contain one.
+     */
+    public fun ancestors(id: String): List<Quest> {
+        val out = ArrayDeque<Quest>()
+        val seen = mutableSetOf(id)
+        var parentId = quests[id]?.parentId
+        while (parentId != null && seen.add(parentId)) {
+            val parent = quests[parentId] ?: break
+            out.addFirst(parent)
+            parentId = parent.parentId
+        }
+        return out.toList()
+    }
+
+    /**
+     * Where [ids] can be moved: every open quest except those being moved and
+     * everything under them, since a quest inside its own branch would make
+     * the Plan tree a cycle.
+     */
+    public fun moveTargets(ids: Collection<String>): List<Quest> {
+        val excluded = ids.flatMap { branch(it) }.mapTo(mutableSetOf()) { it.id }
+        return quests.values.filter { it.isOpen && it.id !in excluded }
+    }
+
     public fun skillsOf(quest: Quest): List<Skill> =
         quest.skillIds.mapNotNull { skills[it] }.sortedBy { it.name.lowercase() }
 

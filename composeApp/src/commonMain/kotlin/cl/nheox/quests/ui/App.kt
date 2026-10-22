@@ -131,6 +131,7 @@ public fun QuestsApp(
                 Overlay.Suggester -> SuggesterOverlay(app, state)
                 is Overlay.Reschedule -> RescheduleOverlay(app, state, overlay.questIds)
                 is Overlay.SkillPicker -> SkillPickerOverlay(app, state, overlay.questIds)
+                is Overlay.MoveUnder -> MoveUnderOverlay(app, state, overlay.questIds)
                 is Overlay.ConfirmDelete -> ConfirmDeleteOverlay(app, state, overlay.questIds, overlay.title)
             }
         }

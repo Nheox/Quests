@@ -1,5 +1,14 @@
 package cl.nheox.quests.ui.screens
 
+import cl.nheox.quests.domain.RepeatUnit
+import cl.nheox.quests.domain.Repetition
+import cl.nheox.quests.domain.QuickAdd
+import cl.nheox.quests.ui.components.PickerPopup
+import cl.nheox.quests.ui.components.PickerPanel
+import cl.nheox.quests.ui.components.PickerOption
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -155,20 +164,16 @@ public fun QuestEditorPane(
             )
 
             FieldSection(text.fieldSkills)
-            SkillChips(app, state, quest)
+            SkillField(app, state, quest)
 
             FieldSection(text.fieldDueDate)
             DueDateEditor(app, quest)
 
+            FieldSection(text.fieldParent)
+            ParentField(app, state, quest)
+
             FieldSection(text.fieldEstimate)
-            NumberField(
-                value = quest.estimatedMinutes,
-                onValueChange = {
-                    app.store.changeQuest(quest.id, FieldPatch().setIntOrNull(QuestFields.ESTIMATED_MINUTES, it))
-                },
-                suffix = text.fieldMinutes,
-                onFocusChange = { app.typing = it },
-            )
+            DurationField(app, quest)
 
             FieldSection(text.fieldRewardBonus)
             NumberField(
@@ -193,13 +198,7 @@ public fun QuestEditorPane(
             )
 
             FieldSection(text.fieldRepetition)
-            RepetitionField(
-                value = quest.repetition,
-                onValueChange = {
-                    app.store.changeQuest(quest.id, FieldPatch().setRepetition(QuestFields.REPETITION, it))
-                },
-                onFocusChange = { app.typing = it },
-            )
+            RepeatField(app, quest)
 
             FieldSection(text.fieldReminders)
             RemindersEditor(app, quest)
@@ -488,76 +487,255 @@ private fun RemindersEditor(app: AppState, quest: Quest) {
     }
 }
 
+/**
+ * A field that opens a picker (the owner's layout 4): what is chosen, shown
+ * in a bordered box with its own action at the right, and the picker opening
+ * right under it. The edge turns teal while the picker is open, so it is clear
+ * which field it belongs to.
+ */
 @Composable
-private fun SkillChips(app: AppState, state: QuestsState, quest: Quest) {
-    val text = strings
-    var adding by remember(quest.id) { mutableStateOf("") }
+private fun PickerField(
+    open: Boolean,
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit,
+    action: String,
+    picker: @Composable () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+) {
+    var height by remember { mutableStateOf(40.dp) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val shape = RoundedCornerShape(Radii.md)
+    Box(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 40.dp)
+                .onSizeChanged { height = with(density) { it.height.toDp() } }
+                .background(theme.background, shape)
+                .border(1.dp, if (open) theme.accent else theme.border, shape)
+                .focusRing(shape)
+                .clickableRow(onClick = onOpen)
+                .padding(horizontal = Space.sm, vertical = Space.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Space.sm),
+        ) {
+            Row(
+                Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.xs),
+                content = content,
+            )
+            Text(action, style = MaterialTheme.typography.labelLarge, color = theme.accent, maxLines = 1)
+        }
+        PickerPopup(open = open, onDismiss = onDismiss, below = height) { picker() }
+    }
+}
 
-    Column(Modifier.fillMaxWidth()) {
-        if (state.skills.isEmpty()) {
-            Text(text.skillsEmpty, style = MaterialTheme.typography.bodySmall, color = theme.textFaint)
+/** A plain value in a picker field. */
+@Composable
+private fun FieldValue(value: String, muted: Boolean = false) {
+    Text(
+        value,
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (muted) theme.textMuted else theme.text,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/**
+ * The quest's skills as chips in each skill's colour, and "+ add" to open the
+ * skills picker: tick and untick there, or type a name to make a new skill.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun SkillField(app: AppState, state: QuestsState, quest: Quest) {
+    val text = strings
+    var open by remember(quest.id) { mutableStateOf(false) }
+    val linked = state.skillsOf(quest)
+    PickerField(
+        open = open,
+        onOpen = { open = true },
+        onDismiss = { open = false },
+        action = text.actionAddInline,
+        picker = {
+            PickerPanel(
+                options = state.skills.values
+                    .sortedBy { it.name.lowercase() }
+                    .map { PickerOption(it.id, it.name, ring = Palette.forSkill(it.id)) },
+                selected = quest.skillIds,
+                onPick = { id ->
+                    val next = if (id in quest.skillIds) quest.skillIds - id else quest.skillIds + id
+                    app.store.setSkills(quest.id, next)
+                },
+                onDismiss = { open = false },
+                searchPlaceholder = text.pickerSearchSkills,
+                onTypingChange = { app.typing = it },
+                create = { name ->
+                    if (name.isNotBlank()) {
+                        val id = app.store.findOrCreateSkill(name)
+                        app.store.setSkills(quest.id, quest.skillIds + id)
+                    }
+                },
+                createLabel = { text.newSkill(it) },
+                closeOnPick = false,
+            )
+        },
+    ) {
+        if (linked.isEmpty()) {
+            FieldValue(text.fieldNone, muted = true)
         } else {
             androidx.compose.foundation.layout.FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Space.xs),
                 verticalArrangement = Arrangement.spacedBy(Space.xs),
             ) {
-                state.skills.values.sortedBy { it.name.lowercase() }.forEach { skill ->
-                    val linked = skill.id in quest.skillIds
+                linked.forEach { skill ->
                     val colour = Palette.forSkill(skill.id)
-                    Box(
-                        Modifier
-                            .background(
-                                if (linked) colour.copy(alpha = 0.22f) else theme.card,
-                                RoundedCornerShape(Radii.sm),
-                            )
-                            .focusRing(RoundedCornerShape(Radii.sm))
-                            .clickableRow {
-                                val next = if (linked) quest.skillIds - skill.id else quest.skillIds + skill.id
-                                app.store.setSkills(quest.id, next)
-                            }
-                            .padding(horizontal = Space.sm, vertical = Space.xs),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Space.xs),
-                        ) {
-                            QuestIcon(Glyph.SPARK, size = 11.dp, tint = if (linked) colour else theme.textFaint)
-                            Text(
-                                skill.name,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (linked) colour else theme.textMuted,
-                            )
-                        }
-                    }
+                    Text(
+                        skill.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colour,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .background(colour.copy(alpha = 0.16f), RoundedCornerShape(Radii.sm))
+                            .padding(horizontal = Space.sm, vertical = Space.xxs),
+                    )
                 }
             }
         }
+    }
+}
 
-        Spacer(Modifier.height(Space.sm))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.xs)) {
-            Box(Modifier.weight(1f)) {
-                QuestTextField(
-                    value = adding,
-                    onValueChange = { adding = it },
-                    placeholder = text.actionAdd + " " + text.fieldSkills.lowercase(),
-                    onFocusChange = { app.typing = it },
-                    onImeAction = {
-                        if (adding.isNotBlank()) {
-                            val id = app.store.findOrCreateSkill(adding)
-                            app.store.setSkills(quest.id, quest.skillIds + id)
-                            adding = ""
-                        }
-                    },
+/**
+ * Where the quest sits in the Plan tree: "Top level", or its parent's path.
+ * The picker offers only the parents that are possible — never the quest
+ * itself or anything under it — each with its own path, so two quests with
+ * one title can be told apart. Moving is undoable from the snackbar.
+ */
+@Composable
+private fun ParentField(app: AppState, state: QuestsState, quest: Quest) {
+    val text = strings
+    var open by remember(quest.id) { mutableStateOf(false) }
+    val path = state.ancestors(quest.id)
+    PickerField(
+        open = open,
+        onOpen = { open = true },
+        onDismiss = { open = false },
+        action = text.actionChange,
+        picker = {
+            PickerPanel(
+                options = parentOptions(state, listOf(quest.id), text.topLevel),
+                selected = setOf(quest.parentId),
+                onPick = { parent -> app.store.moveUnder(listOf(quest.id), parent) },
+                onDismiss = { open = false },
+                searchPlaceholder = text.pickerSearchQuests,
+                onTypingChange = { app.typing = it },
+            )
+        },
+    ) {
+        if (path.isEmpty()) {
+            FieldValue(text.topLevel, muted = true)
+        } else {
+            FieldValue(path.joinToString(" › ") { it.title })
+        }
+    }
+}
+
+/**
+ * The parents [ids] could move under: "Top level" first, then every open
+ * quest that is not one of them or under one of them, with its path.
+ */
+internal fun parentOptions(state: QuestsState, ids: List<String>, topLevel: String): List<PickerOption<String?>> =
+    listOf(PickerOption<String?>(null, topLevel)) +
+        state.moveTargets(ids)
+            .sortedWith(compareBy({ it.title.lowercase() }, { it.id }))
+            .map { target ->
+                val path = state.ancestors(target.id)
+                PickerOption<String?>(
+                    value = target.id,
+                    label = target.title,
+                    detail = path.takeIf { it.isNotEmpty() }?.joinToString(" › ") { it.title },
                 )
             }
-            IconAction(Glyph.PLUS, text.actionAdd, size = 26.dp, onClick = {
-                if (adding.isNotBlank()) {
-                    val id = app.store.findOrCreateSkill(adding)
-                    app.store.setSkills(quest.id, quest.skillIds + id)
-                    adding = ""
-                }
-            })
-        }
+
+/** Estimates people actually give, in minutes. Anything else can be typed. */
+private val DURATIONS = listOf(5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240)
+
+@Composable
+private fun DurationField(app: AppState, quest: Quest) {
+    val text = strings
+    var open by remember(quest.id) { mutableStateOf(false) }
+    PickerField(
+        open = open,
+        onOpen = { open = true },
+        onDismiss = { open = false },
+        action = text.actionChange,
+        picker = {
+            PickerPanel(
+                options = listOf(PickerOption<Int?>(null, text.noEstimate)) +
+                    DURATIONS.map { PickerOption<Int?>(it, text.durationShort(it)) },
+                selected = setOf(quest.estimatedMinutes),
+                onPick = { minutes ->
+                    app.store.changeQuest(quest.id, FieldPatch().setIntOrNull(QuestFields.ESTIMATED_MINUTES, minutes))
+                },
+                onDismiss = { open = false },
+                searchPlaceholder = text.pickerDurationHint,
+                onTypingChange = { app.typing = it },
+                create = { typed ->
+                    QuickAdd.parseMinutes(typed)?.let { minutes ->
+                        app.store.changeQuest(quest.id, FieldPatch().setIntOrNull(QuestFields.ESTIMATED_MINUTES, minutes))
+                    }
+                },
+                createLabel = { text.useMinutes(QuickAdd.parseMinutes(it)) },
+            )
+        },
+    ) {
+        val minutes = quest.estimatedMinutes
+        FieldValue(minutes?.let { text.durationShort(it) } ?: text.noEstimate, muted = minutes == null)
+    }
+}
+
+/** Repeats people actually use. Anything else ("every 3 days") can be typed. */
+private val REPEATS = listOf(
+    Repetition(RepeatUnit.DAY),
+    Repetition(RepeatUnit.WEEK),
+    Repetition(RepeatUnit.WEEK, 2),
+    Repetition(RepeatUnit.MONTH),
+    Repetition(RepeatUnit.YEAR),
+    Repetition(RepeatUnit.HOUR),
+)
+
+@Composable
+private fun RepeatField(app: AppState, quest: Quest) {
+    val text = strings
+    var open by remember(quest.id) { mutableStateOf(false) }
+    PickerField(
+        open = open,
+        onOpen = { open = true },
+        onDismiss = { open = false },
+        action = text.actionChange,
+        picker = {
+            PickerPanel(
+                options = listOf(PickerOption<Repetition?>(null, text.repeatNever)) +
+                    REPEATS.map { PickerOption<Repetition?>(it, text.repetitionLabel(it)) },
+                selected = setOf(quest.repetition),
+                onPick = { repetition ->
+                    app.store.changeQuest(quest.id, FieldPatch().setRepetition(QuestFields.REPETITION, repetition))
+                },
+                onDismiss = { open = false },
+                searchPlaceholder = text.pickerRepeatHint,
+                onTypingChange = { app.typing = it },
+                create = { typed ->
+                    QuickAdd.parseRepetition(typed)?.let { repetition ->
+                        app.store.changeQuest(quest.id, FieldPatch().setRepetition(QuestFields.REPETITION, repetition))
+                    }
+                },
+                createLabel = { text.useRepetition(QuickAdd.parseRepetition(it)) },
+            )
+        },
+    ) {
+        val repetition = quest.repetition
+        FieldValue(repetition?.let { text.repetitionLabel(it) } ?: text.repeatNever, muted = repetition == null)
     }
 }
 

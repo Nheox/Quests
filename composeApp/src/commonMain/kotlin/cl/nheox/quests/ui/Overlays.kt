@@ -1,5 +1,9 @@
 package cl.nheox.quests.ui
 
+import cl.nheox.quests.ui.screens.parentOptions
+import cl.nheox.quests.ui.components.PickerPanel
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -311,6 +315,37 @@ public fun RescheduleOverlay(
 }
 
 /** Batch skill assignment across a selection (§7.1). */
+/**
+ * "Move under…" from the keyboard or the palette: the parent picker, centred,
+ * for the marked quests or the one under the cursor. The same picker the
+ * quest pane opens beside its Parent field, offering only the parents that
+ * are possible. The move is one action, undone from the snackbar in one go.
+ */
+@Composable
+public fun MoveUnderOverlay(
+    app: AppState,
+    state: QuestsState,
+    questIds: List<String>,
+) {
+    val text = strings
+    val parents = questIds.mapNotNull { state.quests[it] }.map { it.parentId }.toSet()
+    Scrim(onDismiss = { app.overlay = null }) {
+        // The panel keeps its own clicks: a tap on its padding must not reach
+        // the scrim behind it and close the picker.
+        Box(Modifier.pointerInput(Unit) { detectTapGestures { } }) {
+            PickerPanel(
+                options = parentOptions(state, questIds, text.topLevel),
+                // A tick only when every quest already shares that parent.
+                selected = if (parents.size == 1) parents else emptySet(),
+                onPick = { parent -> app.store.moveUnder(questIds, parent) },
+                onDismiss = { app.overlay = null },
+                searchPlaceholder = text.pickerSearchQuests,
+                onTypingChange = { app.typing = it },
+            )
+        }
+    }
+}
+
 @Composable
 public fun SkillPickerOverlay(
     app: AppState,

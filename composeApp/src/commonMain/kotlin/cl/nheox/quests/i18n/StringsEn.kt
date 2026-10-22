@@ -9,6 +9,7 @@ import cl.nheox.quests.domain.LaunchView
 import cl.nheox.quests.domain.PriorityBreakdown
 import cl.nheox.quests.domain.QuestView
 import cl.nheox.quests.domain.RepeatUnit
+import cl.nheox.quests.domain.Repetition
 import cl.nheox.quests.domain.SortKey
 import cl.nheox.quests.domain.SuggestionReason
 import cl.nheox.quests.domain.Urgency
@@ -169,6 +170,20 @@ public object StringsEn : Strings {
     override val messageNothingDueToday: String = "Nothing due today. That is allowed."
     override val messageNoOverdue: String = "Nothing overdue."
     override val messageNoReminders: String = "No reminders to come. Add one from a quest's details."
+    override val pickerMove: String = "move"
+    override val pickerChoose: String = "choose"
+    override val pickerClose: String = "close"
+    override val pickerSearchSkills: String = "Search skills…"
+    override val pickerSearchQuests: String = "Search quests…"
+    override val pickerDurationHint: String = "Search, or type minutes…"
+    override val pickerRepeatHint: String = "Search, or type e.g. 3 days…"
+    override val actionMoveUnder: String = "Move under…"
+    override val actionAddInline: String = "+ add"
+    override val actionChange: String = "change"
+    override val fieldParent: String = "Parent quest"
+    override val topLevel: String = "Top level"
+    override val repeatNever: String = "Doesn't repeat"
+    override val noEstimate: String = "No estimate"
     override val messageNotEnoughPoints: String = "Not enough reward points."
     override val messageQuestCompleted: String = "Quest completed"
     override val messageQuestFailed: String = "Quest failed"
@@ -296,6 +311,23 @@ public object StringsEn : Strings {
     }
 
     override fun moreCount(count: Int): String = "+$count more"
+
+    override fun newSkill(name: String): String = if (name.isBlank()) "+ New skill…" else "+ New skill “$name”"
+
+    override fun useMinutes(minutes: Int?): String =
+        if (minutes == null) "Type a number of minutes" else "Use ${durationShort(minutes)}"
+
+    override fun repetitionLabel(repetition: Repetition): String {
+        val unit = repeatUnit(repetition.unit)
+        return if (repetition.every == 1) "Every $unit" else "Every ${repetition.every} ${unit}s"
+    }
+
+    override fun useRepetition(repetition: Repetition?): String =
+        repetition?.let { repetitionLabel(it) } ?: "Type a number and a unit, e.g. 3 days"
+
+    override fun questsMoved(count: Int): String = if (count == 1) "Moved 1 quest" else "Moved $count quests"
+
+    override fun movedDetail(parentTitle: String?): String = parentTitle?.let { "under $it" } ?: "to the top level"
 
     override fun dueMeta(due: LocalDate, time: LocalTime?, today: LocalDate): String {
         val days = java.time.temporal.ChronoUnit.DAYS.between(today, due)
