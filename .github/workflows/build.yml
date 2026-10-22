@@ -17,7 +17,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # The images the packages below are built on, named exactly rather than
+        # as -latest so a moved alias cannot change the toolchain unannounced.
+        # The tests are plain JVM code, so the other two architectures would
+        # add nothing here; their package jobs still compile everything.
+        os: [ubuntu-24.04, macos-15]
     steps:
       - uses: actions/checkout@v4
 
@@ -38,10 +42,20 @@ jobs:
           name: test-report-${{ matrix.os }}
           path: composeApp/build/reports/tests/
 
+  # jpackage cannot cross-compile: a package is always for the architecture of
+  # the machine that built it, so each target in SPEC §8.5 gets its own runner.
   package-linux:
-    name: Package .deb
-    runs-on: ubuntu-latest
+    name: Package .deb (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -52,10 +66,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # jpackage shells out to both, and the failure when fakeroot is absent is
-      # only visible in build/compose/logs/.
+      # jpackage shells out to fakeroot and dpkg, and the failure when fakeroot
+      # is absent is only visible in build/compose/logs/. file is for the
+      # architecture check below.
       - name: Install packaging tools
-        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg
+        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg file
 
       - name: Build the package
         run: ./gradlew packageDeb --no-daemon
@@ -72,10 +87,50 @@ jobs:
             cat "$f"
           done
 
+      - name: Locate the package
+        run: |
+          set -- composeApp/build/compose/binaries/main/deb/*.deb
+          if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+            echo "Expected exactly one .deb, found:"
+            ls -l composeApp/build/compose/binaries/main/deb/ || true
+            exit 1
+          fi
+          echo "DEB=$1" >> "$GITHUB_ENV"
+
+      # jpackage labels the package with the build machine's dpkg architecture
+      # but bundles the runtime of whichever JDK runs Gradle, so the two can
+      # disagree, and such a package installs cleanly and then cannot start.
+      # Check the label against the runner, and every native binary against it.
+      - name: Check the package architecture
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          host=$(dpkg --print-architecture)
+          label=$(dpkg-deb -f "$DEB" Architecture)
+          if [ "$host" != "$ARCH" ] || [ "$label" != "$ARCH" ]; then
+            echo "Expected $ARCH, but the runner is $host and the package says $label."
+            exit 1
+          fi
+          case "$ARCH" in
+            amd64) machine='x86-64' ;;
+            arm64) machine='ARM aarch64' ;;
+            *) echo "No ELF machine name is known for $ARCH."; exit 1 ;;
+          esac
+          dpkg-deb -x "$DEB" deb-root
+          find deb-root -type f -exec file {} + | grep ': *ELF ' > native.txt || true
+          if [ ! -s native.txt ]; then
+            echo "Found no native code in the package, so nothing was checked."
+            exit 1
+          fi
+          if grep -v -F ", $machine," native.txt; then
+            echo "The files above are native code for another architecture than $ARCH."
+            exit 1
+          fi
+          echo "$(grep -c . native.txt) native files, all $machine."
+
       - name: Check the launcher is on PATH in the package
         run: |
-          deb=$(ls composeApp/build/compose/binaries/main/deb/*.deb)
-          dpkg-deb -c "$deb" | grep -q 'usr/bin/quests -> ' || {
+          dpkg-deb -c "$DEB" | grep -q 'usr/bin/quests -> ' || {
             echo "The .deb is missing /usr/bin/quests, so 'quests --capture' would"
             echo "not resolve and global quick capture would be broken."
             exit 1
@@ -83,23 +138,69 @@ jobs:
 
       - name: Check the package adds only one menu entry
         run: |
-          deb=$(ls composeApp/build/compose/binaries/main/deb/*.deb)
-          dpkg-deb -e "$deb" deb-control
+          dpkg-deb -e "$DEB" deb-control
           if grep -q 'xdg-desktop-menu' deb-control/postinst deb-control/prerm; then
             echo "The maintainer scripts register jpackage's generated desktop entry"
             echo "alongside ours, so the application menu would show Quests twice."
             exit 1
           fi
 
+      # The end-to-end form of the two checks above: install the package the
+      # way a person would, run it by the name a desktop keybinding uses, and
+      # remove it again so prerm runs too. The version it prints names the
+      # artefact, and must be the one the package declares.
+      - name: Install, run and remove the package
+        timeout-minutes: 5
+        run: |
+          sudo apt-get install -y "./$DEB"
+          version=$(quests --version)
+          re='^[0-9][0-9A-Za-z.+~-]*$'
+          if ! [[ $version =~ $re ]]; then
+            echo "quests --version printed '$version', which is not a version."
+            exit 1
+          fi
+          declared=$(dpkg-deb -f "$DEB" Version)
+          if [ "${declared%-*}" != "$version" ]; then
+            echo "The package declares version $declared but the app reports $version."
+            exit 1
+          fi
+          sudo apt-get remove -y quests
+          echo "QUESTS_VERSION=$version" >> "$GITHUB_ENV"
+
+      # jpackage appends the Debian revision to the file name; SPEC §8.5 names
+      # the artefact without it. The checksum file sits beside the package and
+      # verifies with `sha256sum -c`.
+      - name: Name the artefact and write its checksum
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          name="quests_${QUESTS_VERSION}_${ARCH}.deb"
+          mkdir dist
+          cp "$DEB" "dist/$name"
+          cd dist
+          sha256sum "$name" > "$name.sha256"
+          cat "$name.sha256"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: quests-deb
-          path: composeApp/build/compose/binaries/main/deb/*.deb
+          name: quests-deb-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
 
   package-macos:
-    name: Package .dmg
-    runs-on: macos-latest
+    name: Package .dmg (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          # GitHub's Intel macOS runners end with the macOS 15 image in late
+          # 2027 (SPEC §8.5); review this entry then.
+          - runner: macos-15-intel
+            arch: x86_64
     steps:
       - uses: actions/checkout@v4
 
@@ -127,7 +228,99 @@ jobs:
             cat "$f"
           done
 
+      - name: Locate the package
+        run: |
+          set -- composeApp/build/compose/binaries/main/dmg/*.dmg
+          if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+            echo "Expected exactly one .dmg, found:"
+            ls -l composeApp/build/compose/binaries/main/dmg/ || true
+            exit 1
+          fi
+          echo "DMG=$1" >> "$GITHUB_ENV"
+
+      # jpackage attaches LICENSE to the image as a click-through agreement, and
+      # attaching such an image waits for someone to accept it. Converting it to
+      # a raw image first keeps every file and drops the agreement, which is how
+      # Homebrew mounts casks too.
+      - name: Mount the disk image
+        id: mount
+        timeout-minutes: 5
+        run: |
+          hdiutil convert -quiet -format UDTO -o "$RUNNER_TEMP/quests.cdr" "$DMG"
+          mkdir -p "$RUNNER_TEMP/quests-dmg"
+          hdiutil attach -nobrowse -readonly -noautoopen \
+            -mountpoint "$RUNNER_TEMP/quests-dmg" "$RUNNER_TEMP/quests.cdr"
+          app="$RUNNER_TEMP/quests-dmg/Quests.app"
+          if [ ! -d "$app" ]; then
+            echo "The disk image does not contain Quests.app. It contains:"
+            ls -la "$RUNNER_TEMP/quests-dmg"
+            exit 1
+          fi
+          echo "APP=$app" >> "$GITHUB_ENV"
+
+      # The runtime inside the app is whichever JDK ran Gradle, and an Apple
+      # silicon Mac runs an Intel one under Rosetta without complaint, so a
+      # wrong-architecture image would pass a launch test. Check every native
+      # binary against the runner instead. Universal binaries pass, because
+      # file names every architecture they hold on their first line.
+      - name: Check the package architecture
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          host=$(uname -m)
+          if [ "$host" != "$ARCH" ]; then
+            echo "Expected $ARCH, but the runner is $host."
+            exit 1
+          fi
+          find "$APP" -type f -exec file {} + | grep 'Mach-O' | grep -v '(for architecture' > native.txt || true
+          if [ ! -s native.txt ]; then
+            echo "Found no native code in the app, so nothing was checked."
+            exit 1
+          fi
+          if grep -v -E "Mach-O.*[ []$ARCH" native.txt; then
+            echo "The files above are native code for another architecture than $ARCH."
+            exit 1
+          fi
+          echo "$(grep -c . native.txt) native files, all $ARCH."
+
+      # The bundle itself carries 1.0.0 while the project is pre-1.0 (see
+      # macAppVersion in composeApp/build.gradle.kts), so the real version comes
+      # from the app, which also proves the packaged launcher starts.
+      - name: Run the packaged app
+        timeout-minutes: 2
+        run: |
+          version=$("$APP/Contents/MacOS/Quests" --version)
+          re='^[0-9][0-9A-Za-z.+~-]*$'
+          if ! [[ $version =~ $re ]]; then
+            echo "Quests --version printed '$version', which is not a version."
+            exit 1
+          fi
+          echo "QUESTS_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Unmount the disk image
+        if: always() && steps.mount.outcome != 'skipped'
+        run: |
+          if mount | grep -qF " on $RUNNER_TEMP/quests-dmg ("; then
+            hdiutil detach -force "$RUNNER_TEMP/quests-dmg"
+          fi
+
+      # jpackage names the image after the bundle version, which is the same
+      # 1.0.0 on both architectures while the project is pre-1.0. Name it as
+      # SPEC §8.5 does instead: the version a person sees, and the architecture.
+      # The checksum file sits beside it and verifies with `shasum -a 256 -c`.
+      - name: Name the artefact and write its checksum
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          name="Quests-${QUESTS_VERSION}-${ARCH}.dmg"
+          mkdir dist
+          cp "$DMG" "dist/$name"
+          cd dist
+          shasum -a 256 "$name" > "$name.sha256"
+          cat "$name.sha256"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: quests-dmg
-          path: composeApp/build/compose/binaries/main/dmg/*.dmg
+          name: quests-dmg-${{ matrix.arch }}
+          path: dist/
+          if-no-files-found: error
