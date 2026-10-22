@@ -44,11 +44,18 @@ public object Balance {
         (BASE_XP * difficulty.multiplier * fear.bonus * durationFactor(estimatedMinutes)).roundToInt()
 
     /**
-     * `round(2 × difficulty × duration)` — fear excluded, so the spendable
-     * economy stays legible and does not track the XP curve.
+     * `round(2 × difficulty × duration) + (rewardBonus ?: 0)` — fear excluded,
+     * so the spendable economy stays legible and does not track the XP curve.
+     *
+     * The bonus is a hand-set premium for a quest the formula undervalues
+     * (§5.5). It is points only, never XP: XP is the record of what was done,
+     * and a record that can be topped up by hand stops being one. A negative
+     * bonus, which only a hand-edited log can produce, counts as none —
+     * completing a quest never costs anything.
      */
-    public fun rewardPoints(difficulty: Difficulty, estimatedMinutes: Int?): Int =
-        (POINTS_COEFFICIENT * difficulty.multiplier * durationFactor(estimatedMinutes)).roundToInt()
+    public fun rewardPoints(difficulty: Difficulty, estimatedMinutes: Int?, rewardBonus: Int? = null): Int =
+        (POINTS_COEFFICIENT * difficulty.multiplier * durationFactor(estimatedMinutes)).roundToInt() +
+            (rewardBonus ?: 0).coerceAtLeast(0)
 
     /**
      * Distributes [totalXp] across [skillIds] as evenly as whole numbers allow,

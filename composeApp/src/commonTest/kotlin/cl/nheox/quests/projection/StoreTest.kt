@@ -83,6 +83,65 @@ class StoreTest {
     }
 
     @Test
+    fun `a reward bonus is paid on completion, recorded, and returned by undo`() {
+        val skill = store.createSkill("Thesis")
+        // LOW at 30 minutes pays 2 points and 10 XP by formula.
+        val id = store.createQuest(
+            QuestDraft(title = "x", difficulty = Difficulty.LOW, estimatedMinutes = 30, skillIds = setOf(skill), rewardBonus = 5),
+        )
+        assertEquals(7, state().quests.getValue(id).projectedPoints())
+
+        store.completeQuest(id)
+        assertEquals(7, state().profile.rewardPointBalance)
+        assertEquals(7, state().quests.getValue(id).rewardPoints)
+        assertEquals(7, state().completions.single().points)
+        assertEquals(10L, state().skills.getValue(skill).totalXp, "a bonus is points only, never XP")
+
+        // The payout is what the event recorded, so it survives a restart
+        // whatever the formula says by then.
+        assertEquals(7, newStore().state.value.profile.rewardPointBalance)
+
+        store.undo()
+        assertEquals(0, state().profile.rewardPointBalance)
+    }
+
+    @Test
+    fun `a reward bonus can be set, changed and cleared by patch`() {
+        val id = store.createQuest(QuestDraft(title = "x", difficulty = Difficulty.LOW, estimatedMinutes = 30))
+        assertNull(state().quests.getValue(id).rewardBonus)
+
+        store.changeQuest(id, FieldPatch().setIntOrNull(QuestFields.REWARD_BONUS, 4))
+        assertEquals(4, state().quests.getValue(id).rewardBonus)
+        assertEquals(4, newStore().state.value.quests.getValue(id).rewardBonus)
+
+        store.changeQuest(id, FieldPatch().setIntOrNull(QuestFields.REWARD_BONUS, null))
+        assertNull(state().quests.getValue(id).rewardBonus)
+        assertNull(newStore().state.value.quests.getValue(id).rewardBonus, "an explicit null clears it on replay too")
+
+        store.changeQuest(id, FieldPatch().setIntOrNull(QuestFields.REWARD_BONUS, 3))
+        store.completeQuest(id)
+        assertEquals(5, state().profile.rewardPointBalance)
+    }
+
+    @Test
+    fun `a reward bonus carries to the next occurrence and to a duplicate`() {
+        val id = store.createQuest(
+            QuestDraft(
+                title = "Water the plants",
+                dueDate = LocalDate.of(2026, 10, 16),
+                repetition = Repetition(RepeatUnit.DAY, 3),
+                rewardBonus = 2,
+            ),
+        )
+        val copy = store.duplicateQuest(id)
+        assertEquals(2, state().quests.getValue(assertNotNull(copy)).rewardBonus)
+
+        store.completeQuest(id)
+        val next = state().quests.values.single { it.isOpen && it.id != copy }
+        assertEquals(2, next.rewardBonus)
+    }
+
+    @Test
     fun `undo of a completion returns the xp and the points`() {
         val skill = store.createSkill("Thesis")
         val id = store.createQuest(QuestDraft(title = "x", skillIds = setOf(skill)))

@@ -104,6 +104,9 @@ public interface Strings {
     public val fieldConsumable: String
     public val fieldName: String
     public val fieldMinutes: String
+    public val fieldRewardBonus: String
+    public val fieldRewardBonusBody: String
+    public val fieldPoints: String
     public val fieldNone: String
     public val fieldOptional: String
     public val rescheduleToday: String

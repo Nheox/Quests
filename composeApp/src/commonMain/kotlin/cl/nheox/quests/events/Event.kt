@@ -59,6 +59,8 @@ public sealed class Event {
         val parentId: String? = null,
         val manualOrder: Int = 0,
         val skillIds: Set<String> = emptySet(),
+        /** Added in 0.5; absent from older lines, which then simply have none. */
+        val rewardBonus: Int? = null,
     ) : Event()
 
     @Serializable

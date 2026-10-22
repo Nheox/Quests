@@ -82,6 +82,48 @@ class BalanceTest {
     }
 
     @Test
+    fun `reward bonus adds to the formula and nothing else`() {
+        data class Case(
+            val difficulty: Difficulty,
+            val minutes: Int?,
+            val bonus: Int?,
+            val expected: Int,
+        )
+
+        // round(2 × difficulty × duration) + (rewardBonus ?: 0)
+        val cases = listOf(
+            Case(Difficulty.LOW, 30, null, 2),
+            Case(Difficulty.LOW, 30, 0, 2),
+            Case(Difficulty.LOW, 30, 1, 3),
+            Case(Difficulty.LOW, 30, 5, 7),
+            Case(Difficulty.MODERATE, null, 10, 13),
+            Case(Difficulty.EXTREME, 120, 3, 23),
+            Case(Difficulty.TRIVIAL, 1, 100, 101),
+            // Only a hand-edited log can say -4; it must not turn completion
+            // into a fine.
+            Case(Difficulty.LOW, 30, -4, 2),
+        )
+
+        cases.forEach { case ->
+            assertEquals(
+                case.expected,
+                Balance.rewardPoints(case.difficulty, case.minutes, case.bonus),
+                "points for ${case.difficulty}/${case.minutes}/bonus ${case.bonus}",
+            )
+        }
+    }
+
+    @Test
+    fun `a quest's projected payout carries its bonus into points and never into xp`() {
+        val created = java.time.Instant.parse("2026-10-01T09:00:00Z")
+        val plain = Quest(id = "q", title = "q", difficulty = Difficulty.LOW, createdAt = created, updatedAt = created)
+        val bonused = plain.copy(rewardBonus = 5)
+        assertEquals(2, plain.projectedPoints())
+        assertEquals(7, bonused.projectedPoints())
+        assertEquals(plain.projectedXp(), bonused.projectedXp())
+    }
+
+    @Test
     fun `urgency never appears in any payout`() {
         // The strongest commitment in the balance design: if this ever fails,
         // the app has started rewarding procrastination.

@@ -37,6 +37,7 @@ public data class QuestDraft(
     val reminders: List<Reminder> = emptyList(),
     val parentId: String? = null,
     val skillIds: Set<String> = emptySet(),
+    val rewardBonus: Int? = null,
 )
 
 /** What the snackbar offers to take back. */
@@ -162,6 +163,7 @@ public class QuestStore(
                 parentId = draft.parentId,
                 manualOrder = order,
                 skillIds = draft.skillIds,
+                rewardBonus = draft.rewardBonus,
             ),
         )
         return id
@@ -217,6 +219,7 @@ public class QuestStore(
                 parentId = quest.parentId,
                 manualOrder = quest.manualOrder,
                 skillIds = quest.skillIds,
+                rewardBonus = quest.rewardBonus,
             )
         }
 
@@ -296,6 +299,7 @@ public class QuestStore(
                 reminders = quest.reminders,
                 parentId = quest.parentId,
                 skillIds = quest.skillIds,
+                rewardBonus = quest.rewardBonus,
             ),
         )
     }

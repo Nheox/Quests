@@ -94,6 +94,7 @@ public object QuestFields {
     public const val PARENT_ID: String = "parentId"
     public const val MANUAL_ORDER: String = "manualOrder"
     public const val SKILL_IDS: String = "skillIds"
+    public const val REWARD_BONUS: String = "rewardBonus"
 }
 
 public object SkillFields {

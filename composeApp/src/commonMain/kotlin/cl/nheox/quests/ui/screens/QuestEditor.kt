@@ -160,6 +160,28 @@ public fun QuestEditorPane(
                 onFocusChange = { app.typing = it },
             )
 
+            SectionHeader(text.fieldRewardBonus)
+            NumberField(
+                value = quest.rewardBonus,
+                onValueChange = { typed ->
+                    // Zero and empty mean the same thing, so only one of them
+                    // is ever written: an empty field is no bonus at all.
+                    val bonus = typed?.takeIf { it > 0 }
+                    if (bonus != quest.rewardBonus) {
+                        app.store.changeQuest(quest.id, FieldPatch().setIntOrNull(QuestFields.REWARD_BONUS, bonus))
+                    }
+                },
+                suffix = text.fieldPoints,
+                step = 1,
+                onFocusChange = { app.typing = it },
+            )
+            Text(
+                text.fieldRewardBonusBody,
+                style = MaterialTheme.typography.bodySmall,
+                color = theme.textFaint,
+                modifier = Modifier.padding(top = Space.xs),
+            )
+
             SectionHeader(text.fieldDueDate)
             DueDateEditor(app, quest)
 

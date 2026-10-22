@@ -120,6 +120,7 @@ public object MarkdownExport {
         facts += quest.difficulty.name.lowercase().replace('_', ' ')
         if (quest.fear.index > 0) facts += "fear: ${quest.fear.name.lowercase()}"
         quest.estimatedMinutes?.let { facts += Dates.formatMinutes(it) }
+        quest.rewardBonus?.takeIf { it > 0 }?.let { facts += "+$it bonus points" }
         val skills = state.skillsOf(quest)
         if (skills.isNotEmpty()) facts += skills.joinToString(", ") { "#" + it.name.replace(' ', '-') }
         if (facts.isNotEmpty()) {

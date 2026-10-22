@@ -33,6 +33,8 @@ public data class Quest(
     /** What completion actually paid out, recorded rather than recomputed. */
     val rewardPoints: Int = 0,
     val xpAwarded: Int = 0,
+    /** Extra reward points set by hand (§5.5); null for the usual case of none. */
+    val rewardBonus: Int? = null,
 ) {
     public val isOpen: Boolean get() = state == QuestState.OPEN
     public val isDone: Boolean get() = state == QuestState.DONE
@@ -43,7 +45,7 @@ public data class Quest(
     /** What this quest *would* pay if completed now, under the current balance. */
     public fun projectedXp(): Int = Balance.xp(difficulty, fear, estimatedMinutes)
 
-    public fun projectedPoints(): Int = Balance.rewardPoints(difficulty, estimatedMinutes)
+    public fun projectedPoints(): Int = Balance.rewardPoints(difficulty, estimatedMinutes, rewardBonus)
 }
 
 @Serializable

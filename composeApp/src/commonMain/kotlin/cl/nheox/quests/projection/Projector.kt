@@ -100,6 +100,7 @@ public object Projector {
                             skillIds = event.skillIds,
                             createdAt = event.ts,
                             updatedAt = event.ts,
+                            rewardBonus = event.rewardBonus,
                         )
                         ),
                 )
@@ -519,6 +520,8 @@ public object Projector {
         QuestFields.SKILL_IDS -> quest.copy(
             skillIds = value.decodeOrNull(SetSerializer(String.serializer())) ?: quest.skillIds,
         )
+
+        QuestFields.REWARD_BONUS -> quest.copy(rewardBonus = value.asIntOrNull())
 
         else -> quest
     }

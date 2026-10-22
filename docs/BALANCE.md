@@ -47,11 +47,17 @@ doing the hard thing.
 ## Reward points
 
 ```
-rewardPoints = round(2 × difficultyM × durationF)
+rewardPoints = round(2 × difficultyM × durationF) + (rewardBonus ?: 0)
 ```
 
 Fear is excluded, so the spendable economy stays legible and does not track the
 XP curve. Earned far more flatly than XP: a quest paying 65 XP pays 9 points.
+
+`rewardBonus` is an optional, hand-set premium for a quest the formula
+undervalues — usually empty. It adds points and never XP: points are openly
+fictional and exist to be spent, while XP is the record of what was actually
+done. A negative bonus (only a hand-edited log can produce one) counts as none,
+because completing a quest never costs anything.
 
 ## Level curve
 
