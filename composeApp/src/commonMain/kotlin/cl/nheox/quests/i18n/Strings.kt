@@ -14,6 +14,7 @@ import cl.nheox.quests.domain.Urgency
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.Month
 
 /**
@@ -288,6 +289,15 @@ public interface Strings {
 
     /** "+3 more". */
     public fun moreCount(count: Int): String
+
+    /** "due today 15:00", "due tomorrow", "due Friday", "due 14 Nov", "overdue 3 days". */
+    public fun dueMeta(due: LocalDate, time: LocalTime?, today: LocalDate): String
+
+    /** "45 min", "90 min", "2h 30m": an estimate, short. */
+    public fun durationShort(minutes: Int): String
+
+    /** "high urgency", "critical": said on a row only when it is high. */
+    public fun urgencyMeta(urgency: Urgency): String
 
     /** "Reminder today 14:30", "Reminder tomorrow 09:00", "Reminder Thu 29 Oct 09:00". */
     public fun reminderAt(moment: LocalDateTime, today: LocalDate): String

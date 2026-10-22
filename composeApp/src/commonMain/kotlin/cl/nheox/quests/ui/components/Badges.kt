@@ -16,14 +16,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.Fear
-import cl.nheox.quests.domain.Quest
-import cl.nheox.quests.domain.Urgency
 import cl.nheox.quests.ui.theme.Glyph
 import cl.nheox.quests.ui.theme.Palette
 import cl.nheox.quests.ui.theme.Space
 import cl.nheox.quests.ui.theme.strings
 import cl.nheox.quests.ui.theme.theme
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -100,19 +97,6 @@ public fun FearBadge(fear: Fear, modifier: Modifier = Modifier, withLabel: Boole
 }
 
 @Composable
-public fun UrgencyBadge(urgency: Urgency, modifier: Modifier = Modifier, withLabel: Boolean = false) {
-    if (urgency == Urgency.NORMAL && !withLabel) return
-    val color = Palette.of(urgency)
-    if (withLabel) {
-        Pill(strings.urgency(urgency), modifier = modifier, color = color)
-    } else {
-        Canvas(modifier.size(width = 4.dp, height = 14.dp)) {
-            drawRoundRect(color = color, cornerRadius = CornerRadius(2f, 2f))
-        }
-    }
-}
-
-@Composable
 public fun XpPill(xp: Int, modifier: Modifier = Modifier) {
     Pill(
         text = strings.xpAmount(xp),
@@ -132,40 +116,5 @@ public fun PointsPill(points: Int, modifier: Modifier = Modifier) {
         leading = Glyph.COIN,
     )
 }
-
-/**
- * The due date, coloured by how late it is.
- *
- * Relative wording ("today", "in 3 days") beats an absolute date in a list,
- * because the question a list answers is "is this urgent", not "what is the
- * date". The absolute date is in the editor, where that *is* the question.
- */
-@Composable
-public fun DueChip(quest: Quest, today: LocalDate, modifier: Modifier = Modifier) {
-    val due = quest.dueDate ?: return
-    val days = java.time.temporal.ChronoUnit.DAYS.between(today, due)
-    val color = when {
-        days < 0 -> theme.danger
-        days == 0L -> theme.warning
-        days == 1L -> theme.textMuted
-        else -> theme.textFaint
-    }
-    val label = buildString {
-        append(
-            when {
-                days == 0L -> strings.rescheduleToday
-                days == 1L -> strings.rescheduleTomorrow
-                days < 0 -> "${-days}d"
-                days <= 7 -> "${days}d"
-                else -> due.format(shortDate)
-            },
-        )
-        quest.dueTime?.let { append(" ").append(it.format(timeFormat)) }
-    }
-    Pill(label, modifier = modifier, color = color, leading = if (quest.dueTime != null) Glyph.CLOCK else Glyph.CALENDAR)
-}
-
-private val shortDate: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM")
-private val timeFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 public val LongDate: DateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)

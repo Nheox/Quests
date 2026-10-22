@@ -15,6 +15,7 @@ import cl.nheox.quests.domain.Urgency
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.Month
 import java.util.Locale
 
@@ -251,7 +252,7 @@ public object StringsEn : Strings {
 
     override fun countSelected(count: Int): String = "$count selected"
 
-    override fun countSubQuests(count: Int): String = "$count sub-quests"
+    override fun countSubQuests(count: Int): String = if (count == 1) "1 sub-quest" else "$count sub-quests"
 
     override fun countOverdue(count: Int): String = if (count == 1) "1 quest is overdue" else "$count quests are overdue"
 
@@ -296,6 +297,28 @@ public object StringsEn : Strings {
 
     override fun moreCount(count: Int): String = "+$count more"
 
+    override fun dueMeta(due: LocalDate, time: LocalTime?, today: LocalDate): String {
+        val days = java.time.temporal.ChronoUnit.DAYS.between(today, due)
+        if (days < 0) return if (days == -1L) "overdue 1 day" else "overdue ${-days} days"
+        val day = when {
+            days == 0L -> "today"
+            days == 1L -> "tomorrow"
+            days < 7 -> weekdayLong(due.dayOfWeek)
+            else -> "${due.dayOfMonth} ${monthShort(due.month)}"
+        }
+        val at = time?.let { String.format(Locale.ROOT, " %02d:%02d", it.hour, it.minute) }.orEmpty()
+        return "due $day$at"
+    }
+
+    // Minutes up to two hours, because "90 min" is read faster than "1h 30m".
+    override fun durationShort(minutes: Int): String =
+        if (minutes < 120) "$minutes min" else Dates.formatMinutes(minutes)
+
+    override fun urgencyMeta(urgency: Urgency): String = when (urgency) {
+        Urgency.CRITICAL -> "critical"
+        else -> "${urgency(urgency).lowercase()} urgency"
+    }
+
     override fun reminderAt(moment: LocalDateTime, today: LocalDate): String {
         // Locale.ROOT: some locales format digits in another script.
         val time = String.format(Locale.ROOT, "%02d:%02d", moment.hour, moment.minute)
@@ -308,12 +331,7 @@ public object StringsEn : Strings {
     }
 
     override fun questMeta(minutes: Int?, xp: Int): String {
-        val time = when {
-            minutes == null -> null
-            minutes < 60 -> "$minutes min"
-            else -> Dates.formatMinutes(minutes)
-        }
-        return listOfNotNull(time, "$xp XP").joinToString(" · ")
+        return listOfNotNull(minutes?.let { durationShort(it) }, xpAmount(xp)).joinToString(" · ")
     }
 
     // Each line says what the suggester actually did at that energy (see

@@ -86,8 +86,10 @@ public fun PlanScreen(
         }
 
         LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = Space.sm),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.sm),
+            Modifier.fillMaxSize().padding(horizontal = Space.lg),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.md),
+            // The same cards as every other list, with the same gap.
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Space.sm),
         ) {
             items(rows, key = { it.quest.id }) { row ->
                 QuestRow(

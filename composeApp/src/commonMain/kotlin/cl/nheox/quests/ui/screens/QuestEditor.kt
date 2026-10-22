@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cl.nheox.quests.domain.Dates
 import cl.nheox.quests.domain.Difficulty
 import cl.nheox.quests.domain.Fear
@@ -49,7 +50,6 @@ import cl.nheox.quests.ui.components.Pill
 import cl.nheox.quests.ui.components.QuestButton
 import cl.nheox.quests.ui.components.QuestTextField
 import cl.nheox.quests.ui.components.RepetitionField
-import cl.nheox.quests.ui.components.SectionHeader
 import cl.nheox.quests.ui.components.SegmentedSelector
 import cl.nheox.quests.ui.components.TimeField
 import cl.nheox.quests.ui.components.XpPill
@@ -112,7 +112,7 @@ public fun QuestEditorPane(
             if (quest.isOpen) PriorityStrip(app, quest)
             TitleAndNotes(app, quest)
 
-            SectionHeader(text.fieldDifficulty)
+            FieldSection(text.fieldDifficulty)
             SegmentedSelector(
                 options = Difficulty.entries,
                 selected = quest.difficulty,
@@ -128,7 +128,7 @@ public fun QuestEditorPane(
                 modifier = Modifier.padding(top = Space.xs),
             )
 
-            SectionHeader(text.fieldFear)
+            FieldSection(text.fieldFear)
             SegmentedSelector(
                 options = Fear.entries,
                 selected = quest.fear,
@@ -138,7 +138,7 @@ public fun QuestEditorPane(
                 compact = true,
             )
 
-            SectionHeader(text.fieldUrgency)
+            FieldSection(text.fieldUrgency)
             SegmentedSelector(
                 options = Urgency.entries,
                 selected = quest.urgency,
@@ -154,7 +154,13 @@ public fun QuestEditorPane(
                 modifier = Modifier.padding(top = Space.xs),
             )
 
-            SectionHeader(text.fieldEstimate)
+            FieldSection(text.fieldSkills)
+            SkillChips(app, state, quest)
+
+            FieldSection(text.fieldDueDate)
+            DueDateEditor(app, quest)
+
+            FieldSection(text.fieldEstimate)
             NumberField(
                 value = quest.estimatedMinutes,
                 onValueChange = {
@@ -164,7 +170,7 @@ public fun QuestEditorPane(
                 onFocusChange = { app.typing = it },
             )
 
-            SectionHeader(text.fieldRewardBonus)
+            FieldSection(text.fieldRewardBonus)
             NumberField(
                 value = quest.rewardBonus,
                 onValueChange = { typed ->
@@ -186,10 +192,7 @@ public fun QuestEditorPane(
                 modifier = Modifier.padding(top = Space.xs),
             )
 
-            SectionHeader(text.fieldDueDate)
-            DueDateEditor(app, quest)
-
-            SectionHeader(text.fieldRepetition)
+            FieldSection(text.fieldRepetition)
             RepetitionField(
                 value = quest.repetition,
                 onValueChange = {
@@ -198,11 +201,8 @@ public fun QuestEditorPane(
                 onFocusChange = { app.typing = it },
             )
 
-            SectionHeader(text.fieldReminders)
+            FieldSection(text.fieldReminders)
             RemindersEditor(app, quest)
-
-            SectionHeader(text.fieldSkills)
-            SkillChips(app, state, quest)
 
             Spacer(Modifier.height(Space.xl))
         }
@@ -210,6 +210,21 @@ public fun QuestEditorPane(
         HLine()
         EditorActions(app, state, quest)
     }
+}
+
+/**
+ * A field's name in the editor: small capitals, no rule. In a pane this
+ * narrow a rule after every label would only repeat the gap between fields.
+ */
+@Composable
+private fun FieldSection(title: String) {
+    Text(
+        title.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = theme.textFaint,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(top = Space.lg, bottom = Space.xs),
+    )
 }
 
 @Composable

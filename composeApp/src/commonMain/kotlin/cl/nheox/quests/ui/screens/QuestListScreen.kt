@@ -1,6 +1,8 @@
 package cl.nheox.quests.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.nheox.quests.domain.DueBucket
@@ -45,7 +50,10 @@ import cl.nheox.quests.ui.components.Pill
 import cl.nheox.quests.ui.components.QuestButton
 import cl.nheox.quests.ui.components.QuestRow
 import cl.nheox.quests.ui.components.QuestTextField
+import cl.nheox.quests.ui.components.clickableRow
+import cl.nheox.quests.ui.components.focusRing
 import cl.nheox.quests.ui.theme.Glyph
+import cl.nheox.quests.ui.theme.QuestIcon
 import cl.nheox.quests.ui.theme.Radii
 import cl.nheox.quests.ui.theme.Space
 import cl.nheox.quests.ui.theme.strings
@@ -114,8 +122,10 @@ public fun QuestListScreen(
             app.sort.key != SortKey.RANDOM && app.sort.key != SortKey.PRIORITY
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = Space.sm),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.sm),
+            modifier = Modifier.fillMaxSize().padding(horizontal = Space.lg),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.md),
+            // Cards, not lines: a gap between rows instead of a rule.
+            verticalArrangement = Arrangement.spacedBy(Space.sm),
         ) {
             if (grouped) {
                 val buckets = Sorting.groupByDue(quests, app.clock)
@@ -217,8 +227,32 @@ private fun ListToolbar(app: AppState, state: QuestsState, count: Int) {
                 app.selectRandom(app.visibleQuests(state))
             })
             SortControl(app)
-            IconAction(Glyph.PLUS, text.actionNewQuest, tint = theme.accent, onClick = { app.openQuickAdd() })
+            AddButton(onClick = { app.openQuickAdd() })
         }
+    }
+}
+
+/**
+ * The new-quest button: the one filled control in the header, in teal, so the
+ * way to add is always the most visible thing on a list (the owner's list +
+ * detail layout). It opens the same quick-add field as N.
+ */
+@Composable
+private fun AddButton(onClick: () -> Unit) {
+    val text = strings
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val shape = RoundedCornerShape(Radii.md)
+    Box(
+        Modifier
+            .size(32.dp)
+            .background(if (hovered) theme.accent.copy(alpha = 0.32f) else theme.accent.copy(alpha = 0.22f), shape)
+            .focusRing(shape)
+            .clickableRow(interaction = interaction, onClick = onClick)
+            .semantics { contentDescription = text.actionNewQuest },
+        contentAlignment = Alignment.Center,
+    ) {
+        QuestIcon(Glyph.PLUS, size = 18.dp, tint = theme.accent)
     }
 }
 
